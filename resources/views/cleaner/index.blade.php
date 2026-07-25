@@ -593,7 +593,6 @@
             </div>
         </div>
 
-    </div>
 </div>
 
 <script>
@@ -732,7 +731,7 @@ function cleanerApp() {
                 source = source.filter(r => (r.Source || r.source) === this.exportSourceFilter);
             }
 
-            // STRICT RULE: AVOID / EXCLUDE ROWS WHERE PHONE OR EMAIL IS BLANK
+            // STRICT RULE: EXCLUDE / AVOID ROWS WHERE PHONE OR EMAIL IS BLANK
             const validLeads = source.filter(r => {
                 const phone = String(r.Mob || r.mob || '').trim();
                 const email = String(r.Email || r.email || '').trim();
@@ -1034,7 +1033,7 @@ function cleanerApp() {
             let lastValidDate = '';
             let lastValidMonth = '';
 
-            // DB phone lookup set for strict multi-upload deduplication
+            // DB phone set for strict multi-upload deduplication
             const dbPhones = new Set();
             this.dbLeads.forEach(r => {
                 const p = r.Mob || r.mob;
@@ -1098,15 +1097,6 @@ function cleanerApp() {
 
             this.processedData = result;
             setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 100);
-        },
-
-        getCatCount(cat) {
-            return this.filteredRows.filter(d => d.Major_Category === cat).length;
-        },
-
-        getPercent(cat) {
-            const count = this.getCatCount(cat);
-            return Math.round((count / (this.filteredRows.length || 1)) * 100);
         },
 
         get filteredRows() {
