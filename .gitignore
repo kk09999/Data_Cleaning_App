@@ -1,0 +1,9 @@
+/vendor
+/.env
+/storage/*.key
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/logs/*
+.DS_Store
+node_modules
