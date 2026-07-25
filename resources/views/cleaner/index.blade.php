@@ -1,354 +1,247 @@
 @extends('layouts.app')
 
 @section('content')
-<div x-data="cleanerApp()" x-init="initData()">
+<div x-data="cleanerApp" x-init="initData()" style="display: flex; gap: 25px; align-items: flex-start;">
 
-    <!-- Navigation Tabs & Dynamic Export Modal Trigger -->
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
-        <div style="display: flex; gap: 12px;">
+    <!-- LEFT SIDEBAR NAVIGATION MENU -->
+    <div style="width: 260px; flex-shrink: 0; background: white; border-radius: 16px; padding: 20px 14px; border: 1px solid var(--border-color); box-shadow: 0 4px 20px rgba(5,25,77,0.05); position: sticky; top: 90px;">
+        <div style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; padding: 6px 12px 10px 12px;">
+            NAVIGATION MENU
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+            <button 
+                class="btn" 
+                :class="activeTab === 'analytics' ? 'btn-primary' : 'btn-outline'"
+                style="justify-content: flex-start; width: 100%; border-radius: 10px; padding: 11px 16px; font-size: 13.5px;"
+                @click="activeTab = 'analytics'; $nextTick(() => renderCharts())"
+            >
+                <i data-lucide="bar-chart-3" style="width:18px"></i> BI Analytics
+            </button>
+
             <button 
                 class="btn" 
                 :class="activeTab === 'cleaner' ? 'btn-primary' : 'btn-outline'"
+                style="justify-content: flex-start; width: 100%; border-radius: 10px; padding: 11px 16px; font-size: 13.5px;"
                 @click="activeTab = 'cleaner'"
             >
-                <i data-lucide="wand-2" style="width:18px"></i> Multi-Sheet Importer & Cleaner
+                <i data-lucide="wand-2" style="width:18px"></i> Lead Importer
             </button>
+
             <button 
                 class="btn" 
                 :class="activeTab === 'vault' ? 'btn-primary' : 'btn-outline'"
+                style="justify-content: flex-start; width: 100%; border-radius: 10px; padding: 11px 16px; font-size: 13.5px;"
                 @click="activeTab = 'vault'; loadDatabaseVault()"
             >
-                <i data-lucide="database" style="width:18px"></i> MySQL Database Vault (<span x-text="dbLeads.length"></span> Records)
+                <i data-lucide="database" style="width:18px"></i> MySQL Vault (<span x-text="dbLeads.length"></span>)
+            </button>
+
+            <button 
+                class="btn" 
+                :class="activeTab === 'student_search' ? 'btn-primary' : 'btn-outline'"
+                style="justify-content: flex-start; width: 100%; border-radius: 10px; padding: 11px 16px; font-size: 13.5px;"
+                @click="activeTab = 'student_search'"
+            >
+                <i data-lucide="user-search" style="width:18px"></i> Student Lookup
+            </button>
+
+            <div style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; padding: 16px 12px 6px 12px;">
+                TOOLS & ACTIONS
+            </div>
+
+            <button 
+                class="btn btn-gold" 
+                style="justify-content: flex-start; width: 100%; border-radius: 10px; padding: 11px 16px; font-size: 13.5px;"
+                @click="openExportModal(activeTab === 'vault' ? 'vault' : 'current')"
+            >
+                <i data-lucide="sliders" style="width:18px"></i> Dynamic Exporter
+            </button>
+
+            <button 
+                class="btn" 
+                style="justify-content: flex-start; width: 100%; border-radius: 10px; padding: 11px 16px; font-size: 13px; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5;"
+                @click="wipeAllDatabaseLeads()"
+            >
+                <i data-lucide="trash-2" style="width:18px"></i> Wipe Database
             </button>
         </div>
-
-        <button class="btn btn-gold" @click="openExportModal(activeTab === 'vault' ? 'vault' : 'current')">
-            <i data-lucide="sliders" style="width:18px"></i> 🎯 Dynamic Custom Export (Filters & Source)
-        </button>
     </div>
 
-    <!-- TAB 1: Cleaner & Multi-Sheet Aggregator -->
-    <div x-show="activeTab === 'cleaner'">
+    <!-- MAIN RIGHT VIEW CONTAINER -->
+    <div style="flex: 1; min-width: 0;">
 
-        <!-- Hero Banner -->
-        <div style="background: var(--gradient-primary); border-radius: 14px; padding: 25px 35px; color: white; margin-bottom: 25px; box-shadow: 0 10px 30px rgba(8,42,125,0.18); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
-            <div>
-                <h1 style="font-size: 24px; font-weight: 700; margin-bottom: 6px;">Multi-Sheet Importer, Lead Source & MySQL Engine</h1>
-                <p style="color: #cbd5e1; font-size: 13.5px;">
-                    • Filter by <strong>Lead Source</strong> (Google, Facebook, Instagram, Website, etc.).<br>
-                    • <strong>Strict Database Deduplication</strong>: Multi-uploading same files rejects duplicate phone numbers automatically!<br>
-                    • Excel Export Rule: <strong>Automatically avoids rows with blank Phone or Email</strong>!
-                </p>
-            </div>
-            <button class="btn btn-gold" @click="loadSampleDataset()">
-                <i data-lucide="sparkles" style="width:18px"></i> Try Demo Dataset
-            </button>
-        </div>
-
-        <!-- Step 1: File Importer -->
-        <div class="card-panel">
-            <div class="card-title">
-                <i data-lucide="upload" style="width:22px; color:var(--primary-navy)"></i> Step 1: Import Workbooks (Compiles ALL Sheets)
-            </div>
-
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-bottom: 20px;">
-                <div 
-                    :style="importType === 'file' ? 'border-color: var(--accent-blue); background:#f0f7ff;' : ''"
-                    style="border: 2px dashed #cbd5e1; border-radius: 12px; padding: 22px; text-align: center; background: #f8fafc; cursor: pointer;"
-                    @click="importType = 'file'"
-                >
-                    <div style="width: 44px; height: 44px; border-radius: 50%; background: #e0edff; color: var(--primary-navy); display: flex; align-items: center; justify-content: center; margin: 0 auto 10px auto;">
-                        <i data-lucide="file-spreadsheet" style="width:22px"></i>
-                    </div>
-                    <h3 style="font-size: 15px; font-weight: 600; margin-bottom: 4px;">Excel (All Sheets) / CSV</h3>
-                    <p style="font-size: 12px; color: #64748b;">Reads and compiles all sheets inside workbook</p>
-                </div>
-
-                <div 
-                    :style="importType === 'google' ? 'border-color: var(--accent-blue); background:#f0f7ff;' : ''"
-                    style="border: 2px dashed #cbd5e1; border-radius: 12px; padding: 22px; text-align: center; background: #f8fafc; cursor: pointer;"
-                    @click="importType = 'google'"
-                >
-                    <div style="width: 44px; height: 44px; border-radius: 50%; background: #e0edff; color: var(--primary-navy); display: flex; align-items: center; justify-content: center; margin: 0 auto 10px auto;">
-                        <i data-lucide="link" style="width:22px"></i>
-                    </div>
-                    <h3 style="font-size: 15px; font-weight: 600; margin-bottom: 4px;">Google Sheet URL</h3>
-                    <p style="font-size: 12px; color: #64748b;">Paste public shareable Google Sheet link</p>
-                </div>
-
-                <div 
-                    style="border: 2px dashed #fef08a; border-radius: 12px; padding: 22px; text-align: center; background: #fefce8; cursor: pointer;"
-                    @click="loadSampleDataset()"
-                >
-                    <div style="width: 44px; height: 44px; border-radius: 50%; background: #fef08a; color: #854d0e; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px auto;">
-                        <i data-lucide="sparkles" style="width:22px"></i>
-                    </div>
-                    <h3 style="font-size: 15px; font-weight: 600; margin-bottom: 4px; color: #854d0e;">Try Demo Dataset</h3>
-                    <p style="font-size: 12px; color: #a16207;">Test Lead Source & Deduplication</p>
-                </div>
-            </div>
-
-            <!-- File Upload Action -->
-            <template x-if="importType === 'file'">
-                <div style="padding: 20px; background: #f8fafc; border-radius: 10px; border: 1px solid var(--border-color); text-align: center;">
-                    <label style="display: inline-block; cursor: pointer;">
-                        <span class="btn btn-primary" style="padding: 12px 28px; font-size: 15px;">
-                            <i data-lucide="upload" style="width:18px"></i> Choose Excel File (.xlsx, .xls, .csv)
-                        </span>
-                        <input type="file" accept=".xlsx, .xls, .csv" @change="handleFileUpload($event)" style="display: none;">
-                    </label>
-                    <p style="font-size: 12px; color: #64748b; margin-top: 10px;">
-                        Auto-detects Mobile, Email, Name, Date, Course & Lead Source columns
-                    </p>
-                </div>
-            </template>
-
-            <!-- Google Sheet Action -->
-            <template x-if="importType === 'google'">
-                <div style="padding: 20px; background: #f8fafc; border-radius: 10px; border: 1px solid var(--border-color);">
-                    <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px;">
-                        Google Sheet Public Share Link:
-                    </label>
-                    <div style="display: flex; gap: 10px;">
-                        <input type="url" placeholder="https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit" x-model="googleUrl" style="flex: 1; padding: 10px 16px; border-radius: 50px; border: 1px solid var(--border-color); font-size: 14px; outline: none;">
-                        <button class="btn btn-primary" @click="fetchGoogleSheet()" :disabled="loading">
-                            <span x-text="loading ? 'Fetching...' : 'Fetch Sheet'"></span>
-                        </button>
-                    </div>
-                </div>
-            </template>
-
-            <template x-if="successMsg">
-                <div style="margin-top: 15px; padding: 12px 16px; background: #f0fdf4; border-left: 4px solid #22c55e; color: #166534; border-radius: 6px; font-size: 13px;">
-                    <span x-text="successMsg"></span>
-                </div>
-            </template>
-        </div>
-
-        <!-- Step 2: Column Binding -->
-        <template x-if="headers.length > 0">
+        <!-- TAB 1: Cleaner & Multi-Sheet Aggregator -->
+        <div x-show="activeTab === 'cleaner'">
             <div class="card-panel">
                 <div class="card-title">
-                    <i data-lucide="settings-2" style="width:22px; color:var(--primary-navy)"></i> Step 2: Auto-Detected Lead Column Bindings
+                    <i data-lucide="upload" style="width:22px; color:var(--primary-navy)"></i> Multi-Sheet Lead Importer
                 </div>
-                
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 18px; margin-bottom: 20px;">
-                    <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid var(--border-color);">
-                        <label style="display: block; font-size: 13px; font-weight: 700; color: var(--primary-navy); margin-bottom: 6px;">
-                            📅 Date Column
-                        </label>
-                        <select x-model="mappings.dateCol" @change="runCleaningEngine()" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 13px;">
-                            <option value="">-- Select Column --</option>
-                            <template x-for="h in headers" :key="h">
-                                <option :value="h" x-text="h"></option>
-                            </template>
-                        </select>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; margin-bottom: 20px;">
+                    <div 
+                        :style="importType === 'file' ? 'border-color: var(--accent-blue); background:#f0f7ff;' : ''"
+                        style="border: 2px dashed #cbd5e1; border-radius: 12px; padding: 20px; text-align: center; background: #f8fafc; cursor: pointer;"
+                        @click="importType = 'file'"
+                    >
+                        <div style="width: 40px; height: 40px; border-radius: 50%; background: #e0edff; color: var(--primary-navy); display: flex; align-items: center; justify-content: center; margin: 0 auto 8px auto;">
+                            <i data-lucide="file-spreadsheet" style="width:20px"></i>
+                        </div>
+                        <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 4px;">Excel / CSV File</h3>
+                        <p style="font-size: 11.5px; color: #64748b;">Compiles all sheets inside workbook</p>
                     </div>
 
-                    <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid var(--border-color);">
-                        <label style="display: block; font-size: 13px; font-weight: 700; color: var(--primary-navy); margin-bottom: 6px;">
-                            👤 Name Column (English Only)
-                        </label>
-                        <select x-model="mappings.nameCol" @change="runCleaningEngine()" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 13px;">
-                            <option value="">-- Select Column --</option>
-                            <template x-for="h in headers" :key="h">
-                                <option :value="h" x-text="h"></option>
-                            </template>
-                        </select>
+                    <div 
+                        :style="importType === 'google' ? 'border-color: var(--accent-blue); background:#f0f7ff;' : ''"
+                        style="border: 2px dashed #cbd5e1; border-radius: 12px; padding: 20px; text-align: center; background: #f8fafc; cursor: pointer;"
+                        @click="importType = 'google'"
+                    >
+                        <div style="width: 40px; height: 40px; border-radius: 50%; background: #e0edff; color: var(--primary-navy); display: flex; align-items: center; justify-content: center; margin: 0 auto 8px auto;">
+                            <i data-lucide="link" style="width:20px"></i>
+                        </div>
+                        <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 4px;">Google Sheet URL</h3>
+                        <p style="font-size: 11.5px; color: #64748b;">Paste public Google Sheet link</p>
                     </div>
 
-                    <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid var(--border-color);">
-                        <label style="display: block; font-size: 13px; font-weight: 700; color: var(--primary-navy); margin-bottom: 6px;">
-                            📞 Mob / Phone Column (Validated)
-                        </label>
-                        <select x-model="mappings.phoneCol" @change="runCleaningEngine()" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 13px; font-weight:700; color:#0d6efd">
-                            <option value="">-- Select Column --</option>
-                            <template x-for="h in headers" :key="h">
-                                <option :value="h" x-text="h"></option>
-                            </template>
-                        </select>
-                    </div>
-
-                    <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid var(--border-color);">
-                        <label style="display: block; font-size: 13px; font-weight: 700; color: var(--primary-navy); margin-bottom: 6px;">
-                            ✉️ Email Column
-                        </label>
-                        <select x-model="mappings.emailCol" @change="runCleaningEngine()" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 13px; font-weight:700; color:#0d6efd">
-                            <option value="">-- Select Column --</option>
-                            <template x-for="h in headers" :key="h">
-                                <option :value="h" x-text="h"></option>
-                            </template>
-                        </select>
-                    </div>
-
-                    <div style="background: #fefce8; padding: 15px; border-radius: 8px; border: 1px solid #fef08a;">
-                        <label style="display: block; font-size: 13px; font-weight: 700; color: #854d0e; margin-bottom: 6px;">
-                            🎓 Course Column
-                        </label>
-                        <select x-model="mappings.courseCol" @change="runCleaningEngine()" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #fde047; font-size: 13px; font-weight: 600;">
-                            <option value="">-- Select Column --</option>
-                            <template x-for="h in headers" :key="h">
-                                <option :value="h" x-text="h"></option>
-                            </template>
-                        </select>
-                    </div>
-
-                    <div style="background: #f0fdf4; padding: 15px; border-radius: 8px; border: 1px solid #bbf7d0;">
-                        <label style="display: block; font-size: 13px; font-weight: 700; color: #166534; margin-bottom: 6px;">
-                            🌐 Source Column (Google, FB, etc.)
-                        </label>
-                        <select x-model="mappings.sourceCol" @change="runCleaningEngine()" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #86efac; font-size: 13px; font-weight: 600;">
-                            <option value="">-- Select Column --</option>
-                            <template x-for="h in headers" :key="h">
-                                <option :value="h" x-text="h"></option>
-                            </template>
-                        </select>
+                    <div 
+                        style="border: 2px dashed #fef08a; border-radius: 12px; padding: 20px; text-align: center; background: #fefce8; cursor: pointer;"
+                        @click="loadSampleDataset()"
+                    >
+                        <div style="width: 40px; height: 40px; border-radius: 50%; background: #fef08a; color: #854d0e; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px auto;">
+                            <i data-lucide="sparkles" style="width:20px"></i>
+                        </div>
+                        <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 4px; color: #854d0e;">Try Demo Dataset</h3>
+                        <p style="font-size: 11.5px; color: #a16207;">Test Lead Source & Deduplication</p>
                     </div>
                 </div>
 
-                <div style="display: flex; justify-content: flex-end;">
-                    <button class="btn btn-gold" @click="runCleaningEngine()">
-                        Re-Run Cleaning Engine &rarr;
-                    </button>
-                </div>
+                <template x-if="importType === 'file'">
+                    <div style="padding: 20px; background: #f8fafc; border-radius: 10px; border: 1px solid var(--border-color); text-align: center;">
+                        <label style="display: inline-block; cursor: pointer;">
+                            <span class="btn btn-primary" style="padding: 12px 28px; font-size: 15px;">
+                                <i data-lucide="upload" style="width:18px"></i> Choose Excel File (.xlsx, .xls, .csv)
+                            </span>
+                            <input type="file" accept=".xlsx, .xls, .csv" @change="handleFileUpload($event)" style="display: none;">
+                        </label>
+                    </div>
+                </template>
+
+                <template x-if="successMsg">
+                    <div style="margin-top: 15px; padding: 12px 16px; background: #f0fdf4; border-left: 4px solid #22c55e; color: #166534; border-radius: 6px; font-size: 13px;">
+                        <span x-text="successMsg"></span>
+                    </div>
+                </template>
             </div>
-        </template>
 
-        <!-- Step 3: Overview & Dynamic Custom Export Hub -->
-        <template x-if="processedData.length > 0">
-            <div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap:wrap; gap:10px;">
-                    <h2 style="font-size: 18px; font-weight: 700; color: var(--primary-navy);">
-                        Step 3: Categorization & Database Save Hub
-                    </h2>
-                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap:wrap;">
-                        <button class="btn btn-primary" @click="saveToDatabaseVault()">
-                            <i data-lucide="database-backup" style="width:18px"></i> Save Unique Leads to MySQL
-                        </button>
-                        <button class="btn btn-gold" @click="openExportModal('current')">
-                            <i data-lucide="sliders" style="width:18px"></i> Dynamic Custom Export Hub
-                        </button>
+            <!-- STEP 2: COLUMN BINDING PANEL -->
+            <template x-if="headers.length > 0">
+                <div class="card-panel" style="background: #f8fafc; border: 1px solid #bfdbfe;">
+                    <div class="card-title" style="font-size: 16px;">
+                        <i data-lucide="sliders" style="width:20px; color:var(--accent-blue)"></i> Column Header Binding & Verification
                     </div>
-                </div>
+                    <p style="font-size: 12.5px; color: #64748b; margin-bottom: 15px;">
+                        Verify auto-detected header columns. Adjust mapping below if needed:
+                    </p>
 
-                <!-- Phone Duplicate Stats Card -->
-                <div style="background: #fff7ed; border-left: 5px solid #f97316; border-radius: 10px; padding: 16px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
-                    <div>
-                        <strong style="color: #c2410c; font-size: 15px; display: flex; align-items: center; gap: 6px;">
-                            <i data-lucide="shield-check" style="width:18px"></i> Phone & Database Validation Summary
-                        </strong>
-                        <p style="font-size: 13px; color: #7c2d12; margin-top: 2px;">
-                            Total Processed: <strong><span x-text="processedData.length"></span></strong> | 
-                            Unique Leads: <strong><span x-text="processedData.filter(r => !r.is_duplicate).length"></span></strong> | 
-                            Duplicates Rejected: <strong style="color:#ef4444"><span x-text="processedData.filter(r => r.is_duplicate).length"></span></strong>
-                        </p>
-                    </div>
-
-                    <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; cursor: pointer; color: #7c2d12;">
-                        <input type="checkbox" x-model="hideDuplicates" style="width: 16px; height: 16px;">
-                        Hide Duplicates from Display
-                    </label>
-                </div>
-
-                <!-- Filters Panel: Source & Category Filters -->
-                <div style="background: white; border-radius: 12px; padding: 18px 22px; border: 1px solid var(--border-color); margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
-                    <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
                         <div>
-                            <label style="font-size: 12px; font-weight: 700; color: var(--primary-navy); display: block; margin-bottom: 4px;">
-                                🌐 Filter by Lead Source:
-                            </label>
-                            <select x-model="sourceFilter" style="padding: 8px 14px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 13px; font-weight: 600;">
-                                <option value="ALL">All Sources (Google, FB, Insta, etc.)</option>
-                                <template x-for="s in uniqueSources" :key="s">
-                                    <option :value="s" x-text="s"></option>
+                            <label style="font-size: 12px; font-weight: 700; color: var(--primary-navy); display: block; margin-bottom: 4px;">👤 Student Name Column:</label>
+                            <select x-model="mappings.nameCol" @change="runCleaningEngine()" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 13px; font-weight: 600;">
+                                <option value="">-- Ignore / None --</option>
+                                <template x-for="h in headers" :key="h">
+                                    <option :value="h" x-text="h"></option>
                                 </template>
                             </select>
                         </div>
 
                         <div>
-                            <label style="font-size: 12px; font-weight: 700; color: var(--primary-navy); display: block; margin-bottom: 4px;">
-                                🎓 Filter by Category:
-                            </label>
-                            <select x-model="categoryFilter" style="padding: 8px 14px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 13px; font-weight: 600;">
-                                <option value="ALL">All Categories</option>
-                                <option value="Data Analyst and Scientist">Data Analyst & Scientist</option>
-                                <option value="Accounting and Taxation">Accounting & Taxation</option>
-                                <option value="Full Stack Developer">Full Stack Developer</option>
-                                <option value="Other">Other</option>
+                            <label style="font-size: 12px; font-weight: 700; color: var(--primary-navy); display: block; margin-bottom: 4px;">📞 Phone / Mobile Column:</label>
+                            <select x-model="mappings.phoneCol" @change="runCleaningEngine()" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 13px; font-weight: 600;">
+                                <option value="">-- Ignore / None --</option>
+                                <template x-for="h in headers" :key="h">
+                                    <option :value="h" x-text="h"></option>
+                                </template>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label style="font-size: 12px; font-weight: 700; color: var(--primary-navy); display: block; margin-bottom: 4px;">✉️ Email Address Column:</label>
+                            <select x-model="mappings.emailCol" @change="runCleaningEngine()" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 13px; font-weight: 600;">
+                                <option value="">-- Ignore / None --</option>
+                                <template x-for="h in headers" :key="h">
+                                    <option :value="h" x-text="h"></option>
+                                </template>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label style="font-size: 12px; font-weight: 700; color: var(--primary-navy); display: block; margin-bottom: 4px;">🎓 Course / Stream Column:</label>
+                            <select x-model="mappings.courseCol" @change="runCleaningEngine()" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 13px; font-weight: 600;">
+                                <option value="">-- Ignore / None --</option>
+                                <template x-for="h in headers" :key="h">
+                                    <option :value="h" x-text="h"></option>
+                                </template>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label style="font-size: 12px; font-weight: 700; color: var(--primary-navy); display: block; margin-bottom: 4px;">🏷️ Final Status Column:</label>
+                            <select x-model="mappings.statusCol" @change="runCleaningEngine()" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 13px; font-weight: 600;">
+                                <option value="">-- Ignore / Use Sheet Raw Text --</option>
+                                <template x-for="h in headers" :key="h">
+                                    <option :value="h" x-text="h"></option>
+                                </template>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label style="font-size: 12px; font-weight: 700; color: var(--primary-navy); display: block; margin-bottom: 4px;">🌐 Lead Source Column:</label>
+                            <select x-model="mappings.sourceCol" @change="runCleaningEngine()" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 13px; font-weight: 600;">
+                                <option value="">-- Ignore / None --</option>
+                                <template x-for="h in headers" :key="h">
+                                    <option :value="h" x-text="h"></option>
+                                </template>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label style="font-size: 12px; font-weight: 700; color: var(--primary-navy); display: block; margin-bottom: 4px;">📅 Date Column:</label>
+                            <select x-model="mappings.dateCol" @change="runCleaningEngine()" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 13px; font-weight: 600;">
+                                <option value="">-- Ignore / None --</option>
+                                <template x-for="h in headers" :key="h">
+                                    <option :value="h" x-text="h"></option>
+                                </template>
                             </select>
                         </div>
                     </div>
-
-                    <div style="font-size: 13px; color: #64748b;">
-                        Showing <strong><span x-text="filteredRows.length"></span></strong> matching leads
-                    </div>
                 </div>
+            </template>
 
-                <!-- 4 Major Categories Cards -->
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 25px;">
-                    <div 
-                        @click="categoryFilter = (categoryFilter === 'Data Analyst and Scientist' ? 'ALL' : 'Data Analyst and Scientist')"
-                        :style="categoryFilter === 'Data Analyst and Scientist' ? 'border:2px solid var(--category-da)' : ''"
-                        style="background: white; padding: 20px; border-radius: 14px; border: 1px solid var(--border-color); cursor: pointer;"
-                    >
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <div style="padding: 8px; border-radius: 8px; background: var(--category-da-bg); color: var(--category-da);">
-                                <i data-lucide="database" style="width:22px"></i>
-                            </div>
-                            <span class="badge-cat badge-da" x-text="getPercent('Data Analyst and Scientist') + '%'"></span>
-                        </div>
-                        <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 4px;">Data Analyst & Scientist</h3>
-                        <div style="font-size: 24px; font-weight: 800; color: var(--category-da);" x-text="getCatCount('Data Analyst and Scientist')"></div>
-                    </div>
-
-                    <div 
-                        @click="categoryFilter = (categoryFilter === 'Accounting and Taxation' ? 'ALL' : 'Accounting and Taxation')"
-                        :style="categoryFilter === 'Accounting and Taxation' ? 'border:2px solid var(--category-acc)' : ''"
-                        style="background: white; padding: 20px; border-radius: 14px; border: 1px solid var(--border-color); cursor: pointer;"
-                    >
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <div style="padding: 8px; border-radius: 8px; background: var(--category-acc-bg); color: var(--category-acc);">
-                                <i data-lucide="briefcase" style="width:22px"></i>
-                            </div>
-                            <span class="badge-cat badge-acc" x-text="getPercent('Accounting and Taxation') + '%'"></span>
-                        </div>
-                        <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 4px;">Accounting & Taxation</h3>
-                        <div style="font-size: 24px; font-weight: 800; color: var(--category-acc);" x-text="getCatCount('Accounting and Taxation')"></div>
-                    </div>
-
-                    <div 
-                        @click="categoryFilter = (categoryFilter === 'Full Stack Developer' ? 'ALL' : 'Full Stack Developer')"
-                        :style="categoryFilter === 'Full Stack Developer' ? 'border:2px solid var(--category-dev)' : ''"
-                        style="background: white; padding: 20px; border-radius: 14px; border: 1px solid var(--border-color); cursor: pointer;"
-                    >
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <div style="padding: 8px; border-radius: 8px; background: var(--category-dev-bg); color: var(--category-dev);">
-                                <i data-lucide="code" style="width:22px"></i>
-                            </div>
-                            <span class="badge-cat badge-dev" x-text="getPercent('Full Stack Developer') + '%'"></span>
-                        </div>
-                        <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 4px;">Full Stack Developer</h3>
-                        <div style="font-size: 24px; font-weight: 800; color: var(--category-dev);" x-text="getCatCount('Full Stack Developer')"></div>
-                    </div>
-
-                    <div 
-                        @click="categoryFilter = (categoryFilter === 'Other' ? 'ALL' : 'Other')"
-                        :style="categoryFilter === 'Other' ? 'border:2px solid var(--category-other)' : ''"
-                        style="background: white; padding: 20px; border-radius: 14px; border: 1px solid var(--border-color); cursor: pointer;"
-                    >
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <div style="padding: 8px; border-radius: 8px; background: var(--category-other-bg); color: var(--category-other);">
-                                <i data-lucide="folder-plus" style="width:22px"></i>
-                            </div>
-                            <span class="badge-cat badge-other" x-text="getPercent('Other') + '%'"></span>
-                        </div>
-                        <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 4px;">Other / General</h3>
-                        <div style="font-size: 24px; font-weight: 800; color: var(--category-other);" x-text="getCatCount('Other')"></div>
-                    </div>
-                </div>
-
-                <!-- Data Table -->
+            <!-- Importer Leads Table & Pagination -->
+            <template x-if="processedData.length > 0">
                 <div class="card-panel">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 15px;">
+                        <div>
+                            <h3 style="font-size: 16px; font-weight: 700; color: var(--primary-navy);">
+                                Cleaned Lead Dataset (<span x-text="processedData.length"></span> Total Records)
+                            </h3>
+                        </div>
+
+                        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                            <label style="font-size: 12px; font-weight: 600;">Rows per page:</label>
+                            <select x-model.number="pageSize" @change="page = 1" style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 12px; font-weight: 600;">
+                                <option value="20">20</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                                <option value="500">500</option>
+                            </select>
+
+                            <button class="btn btn-primary" @click="saveToDatabaseVault()">
+                                Save Unique Leads to MySQL Vault
+                            </button>
+                        </div>
+                    </div>
+
                     <div class="table-wrapper">
                         <table class="custom-table">
                             <thead>
@@ -356,32 +249,42 @@
                                     <th>#</th>
                                     <th>Date</th>
                                     <th>Month</th>
+                                    <th>Year</th>
+                                    <th>Quarter</th>
                                     <th>Name</th>
                                     <th>Mob</th>
                                     <th>Email</th>
-                                    <th>Raw Course</th>
-                                    <th>Source</th>
+                                    <th>Course</th>
                                     <th>Major Category</th>
-                                    <th>Status</th>
+                                    <th>Source</th>
+                                    <th>Final Status</th>
+                                    <th>Deduplication</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <template x-for="(row, idx) in paginatedRows" :key="idx">
                                     <tr :class="{'duplicate-row': row.is_duplicate}">
                                         <td style="color:#64748b" x-text="((page - 1) * pageSize) + idx + 1"></td>
-                                        <td style="font-size: 12px; font-weight:600" x-text="row.Date"></td>
+                                        <td style="font-size: 12px;" x-text="row.Date"></td>
                                         <td><strong style="color:var(--primary-navy)" x-text="row.Month"></strong></td>
-                                        <td style="font-weight: 600;" x-text="row.Name"></td>
-                                        <td><span style="font-family:monospace; font-weight:600" x-text="row.Mob"></span></td>
-                                        <td><span style="font-weight:600" x-text="row.Email"></span></td>
-                                        <td><code x-text="row.Raw_Course"></code></td>
-                                        <td>
-                                            <span style="background: #e0edff; color: var(--primary-navy); padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 700;" x-text="row.Source"></span>
-                                        </td>
+                                        <td style="font-size: 12px;" x-text="row.Year"></td>
+                                        <td><span style="background:#e0f2fe; color:#0369a1; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700" x-text="row.Quarter"></span></td>
+                                        <td style="font-weight: 600;" x-text="row.Name || 'N/A'"></td>
+                                        <td><span style="font-family:monospace; font-weight:600" x-text="row.Mob || 'N/A'"></span></td>
+                                        <td><span style="font-weight:600" x-text="row.Email || 'N/A'"></span></td>
+                                        <td><code x-text="row.Raw_Course || 'N/A'"></code></td>
                                         <td><span class="badge-cat badge-da" x-text="row.Major_Category"></span></td>
+                                        <td><span style="background:#e0edff; color:var(--primary-navy); padding:2px 10px; border-radius:12px; font-size:11px; font-weight:700" x-text="row.Source"></span></td>
+                                        <td>
+                                            <span 
+                                                :style="row.Status === 'Will Visit' || row.Status === 'Visited' ? 'background:#fef3c7; color:#d97706' : (row.Status === 'Will Confirm' || row.Status === 'Enrolled' ? 'background:#dcfce7; color:#16a34a' : (row.Status === 'NP' || row.Status === 'Ph Dis' || row.Status === 'Out of Service' || row.Status === 'Switch Off' ? 'background:#fee2e2; color:#dc2626' : 'background:#e0edff; color:#1e40af'))"
+                                                style="padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700;" 
+                                                x-text="row.Status">
+                                            </span>
+                                        </td>
                                         <td>
                                             <template x-if="row.is_duplicate">
-                                                <span style="background: #fee2e2; color: #dc2626; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700;">Duplicate</span>
+                                                <span style="background: #fee2e2; color: #dc2626; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700;">Dup (Phone/Email)</span>
                                             </template>
                                             <template x-if="!row.is_duplicate">
                                                 <span style="background: #dcfce7; color: #16a34a; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700;">Unique</span>
@@ -392,46 +295,50 @@
                             </tbody>
                         </table>
                     </div>
+
+                    <!-- Pagination Controls -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; flex-wrap: wrap; gap: 10px;">
+                        <div style="font-size: 13px; color: #64748b;">
+                            Showing page <strong x-text="page"></strong> of <strong x-text="totalPages"></strong> (<span x-text="processedData.length"></span> total leads)
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn btn-outline" style="padding: 6px 14px; font-size: 12px;" @click="page = Math.max(1, page - 1)" :disabled="page === 1">
+                                &larr; Previous
+                            </button>
+                            <button class="btn btn-outline" style="padding: 6px 14px; font-size: 12px;" @click="page = Math.min(totalPages, page + 1)" :disabled="page === totalPages">
+                                Next &rarr;
+                            </button>
+                        </div>
+                    </div>
                 </div>
-            </div>
+            </template>
         </div>
 
-        <!-- TAB 2: Saved Database Vault -->
+        <!-- TAB 2: Saved Database Vault & CRUD Hub -->
         <div x-show="activeTab === 'vault'">
             <div class="card-panel">
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 20px;">
                     <div>
                         <h2 style="font-size: 18px; font-weight: 700; color: var(--primary-navy); margin: 0; display: flex; align-items: center; gap: 8px;">
-                            <i data-lucide="database" style="width:22px"></i> Saved MySQL Database Vault (<span x-text="filteredDbLeads.length"></span> Unique Records)
+                            <i data-lucide="database" style="width:22px"></i> Saved MySQL Database Vault (<span x-text="filteredDbLeads.length"></span> Records)
                         </h2>
                     </div>
 
-                    <div style="display: flex; gap: 10px;">
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button class="btn btn-primary" @click="openAddLeadModal()">
+                            <i data-lucide="plus-circle" style="width:16px"></i> ➕ Add Lead
+                        </button>
                         <button class="btn btn-gold" @click="openExportModal('vault')">
-                            <i data-lucide="sliders" style="width:16px"></i> Custom Dynamic Export Vault (.xlsx)
+                            <i data-lucide="sliders" style="width:16px"></i> Custom Export
                         </button>
                     </div>
                 </div>
 
-                <!-- Source Filter inside Vault -->
-                <div style="background: #f8fafc; border-radius: 10px; padding: 15px 20px; border: 1px solid var(--border-color); margin-bottom: 20px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
+                <!-- Multi-Filter Bar inside Vault -->
+                <div style="background: #f8fafc; border-radius: 10px; padding: 16px 20px; border: 1px solid var(--border-color); margin-bottom: 20px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
                     <div>
-                        <label style="font-size: 12px; font-weight: 700; color: var(--primary-navy); display: block; margin-bottom: 4px;">
-                            🌐 Filter Vault by Source:
-                        </label>
-                        <select x-model="vaultSourceFilter" style="padding: 8px 14px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 13px; font-weight: 600;">
-                            <option value="ALL">All Sources</option>
-                            <template x-for="s in uniqueVaultSources" :key="s">
-                                <option :value="s" x-text="s"></option>
-                            </template>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label style="font-size: 12px; font-weight: 700; color: var(--primary-navy); display: block; margin-bottom: 4px;">
-                            🎓 Filter Vault by Category:
-                        </label>
-                        <select x-model="vaultCategoryFilter" style="padding: 8px 14px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 13px; font-weight: 600;">
+                        <label style="font-size: 12px; font-weight: 700; color: var(--primary-navy); display: block; margin-bottom: 4px;">🎓 Category:</label>
+                        <select x-model="vaultCategoryFilter" style="padding: 7px 12px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 13px; font-weight: 600;">
                             <option value="ALL">All Categories</option>
                             <option value="Data Analyst and Scientist">Data Analyst & Scientist</option>
                             <option value="Accounting and Taxation">Accounting & Taxation</option>
@@ -439,8 +346,55 @@
                             <option value="Other">Other</option>
                         </select>
                     </div>
+
+                    <div>
+                        <label style="font-size: 12px; font-weight: 700; color: var(--primary-navy); display: block; margin-bottom: 4px;">🏷️ Final Status:</label>
+                        <select x-model="vaultStatusFilter" style="padding: 7px 12px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 13px; font-weight: 600;">
+                            <option value="ALL">All Statuses</option>
+                            <option value="Will Visit">Will Visit</option>
+                            <option value="Will Confirm">Will Confirm</option>
+                            <option value="NP">NP (No Pick)</option>
+                            <option value="Call Later">Call Later</option>
+                            <option value="Enrolled">Enrolled</option>
+                            <option value="Visited">Visited</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label style="font-size: 12px; font-weight: 700; color: var(--primary-navy); display: block; margin-bottom: 4px;">🌐 Source:</label>
+                        <select x-model="vaultSourceFilter" style="padding: 7px 12px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 13px; font-weight: 600;">
+                            <option value="ALL">All Sources</option>
+                            <option value="Google">Google</option>
+                            <option value="Facebook">Facebook</option>
+                            <option value="Instagram">Instagram</option>
+                            <option value="Website">Website</option>
+                            <option value="WhatsApp">WhatsApp</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label style="font-size: 12px; font-weight: 700; color: var(--primary-navy); display: block; margin-bottom: 4px;">📅 Year:</label>
+                        <select x-model="vaultYearFilter" style="padding: 7px 12px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 13px; font-weight: 600;">
+                            <option value="ALL">All Years</option>
+                            <option value="2024">2024</option>
+                            <option value="2025">2025</option>
+                            <option value="2026">2026</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label style="font-size: 12px; font-weight: 700; color: var(--primary-navy); display: block; margin-bottom: 4px;">🗓️ Quarter:</label>
+                        <select x-model="vaultQuarterFilter" style="padding: 7px 12px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 13px; font-weight: 600;">
+                            <option value="ALL">All Quarters</option>
+                            <option value="Q1">Q1 (Jan - Mar)</option>
+                            <option value="Q2">Q2 (Apr - Jun)</option>
+                            <option value="Q3">Q3 (Jul - Sep)</option>
+                            <option value="Q4">Q4 (Oct - Dec)</option>
+                        </select>
+                    </div>
                 </div>
 
+                <!-- Vault Table -->
                 <div class="table-wrapper">
                     <table class="custom-table">
                         <thead>
@@ -448,35 +402,56 @@
                                 <th>#</th>
                                 <th>Date</th>
                                 <th>Month</th>
+                                <th>Year</th>
+                                <th>Quarter</th>
                                 <th>Name</th>
                                 <th>Mob</th>
                                 <th>Email</th>
-                                <th>Raw Course</th>
-                                <th>Source</th>
+                                <th>Course</th>
                                 <th>Major Category</th>
+                                <th>Source</th>
+                                <th>Final Status</th>
+                                <th style="text-align: center;">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             <template x-if="filteredDbLeads.length === 0">
                                 <tr>
-                                    <td colSpan="9" style="text-align:center; padding:30px; color:#64748b">
-                                        No saved database leads match the selected filters.
+                                    <td colSpan="13" style="text-align:center; padding:30px; color:#64748b">
+                                        No database records match selected filters.
                                     </td>
                                 </tr>
                             </template>
-                            <template x-for="(lead, idx) in filteredDbLeads" :key="idx">
+                            <template x-for="(lead, idx) in filteredDbLeads" :key="lead.id || idx">
                                 <tr>
                                     <td style="color:#64748b" x-text="idx + 1"></td>
                                     <td style="font-size: 12px;" x-text="lead.Date || lead.date"></td>
                                     <td><strong style="color:var(--primary-navy)" x-text="lead.Month || lead.month"></strong></td>
+                                    <td style="font-size: 12px;" x-text="lead.Year || lead.year"></td>
+                                    <td><span style="background:#e0f2fe; color:#0369a1; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700" x-text="lead.Quarter || lead.quarter || 'Q1'"></span></td>
                                     <td style="font-weight: 600;" x-text="lead.Name || lead.name"></td>
                                     <td style="font-family:monospace; font-weight:600" x-text="lead.Mob || lead.mob"></td>
                                     <td style="font-weight:600" x-text="lead.Email || lead.email"></td>
                                     <td><code x-text="lead.Raw_Course || lead.raw_course"></code></td>
+                                    <td><span class="badge-cat badge-da" x-text="lead.Major_Category || lead.major_category || 'Other'"></span></td>
+                                    <td><span style="background:#e0edff; color:var(--primary-navy); padding:2px 10px; border-radius:12px; font-size:11px; font-weight:700" x-text="lead.Source || lead.source || 'Direct/Organic'"></span></td>
                                     <td>
-                                        <span style="background: #e0edff; color: var(--primary-navy); padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 700;" x-text="lead.Source || lead.source || 'Direct/Organic'"></span>
+                                        <span 
+                                            :style="(lead.Status || lead.status) === 'Enrolled' || (lead.Status || lead.status) === 'Will Confirm' ? 'background:#dcfce7; color:#16a34a' : (((lead.Status || lead.status) === 'Visited' || (lead.Status || lead.status) === 'Will Visit' ? 'background:#fef3c7; color:#d97706' : 'background:#f1f5f9; color:#475569'))"
+                                            style="padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 700;" 
+                                            x-text="lead.Status || lead.status">
+                                        </span>
                                     </td>
-                                    <td><span class="badge-cat badge-da" x-text="lead.Major_Category || lead.major_category"></span></td>
+                                    <td style="text-align: center;">
+                                        <div style="display: flex; gap: 6px; justify-content: center;">
+                                            <button class="btn btn-outline" style="padding: 4px 8px; font-size: 11px;" @click="openEditLeadModal(lead)">
+                                                ✏️ Edit
+                                            </button>
+                                            <button class="btn" style="background: #fee2e2; color: #dc2626; border: none; padding: 4px 8px; font-size: 11px; border-radius: 6px;" @click="deleteSingleLead(lead.id)">
+                                                🗑️
+                                            </button>
+                                        </div>
+                                    </td>
                                 </tr>
                             </template>
                         </tbody>
@@ -485,645 +460,1079 @@
             </div>
         </div>
 
-        <!-- DYNAMIC CUSTOM EXPORT MODAL -->
-        <div 
-            x-show="exportModalOpen" 
-            style="position: fixed; inset: 0; background: rgba(5,25,77,0.7); backdrop-filter: blur(6px); z-index: 999; display: flex; align-items: center; justify-content: center; padding: 20px;"
-            x-transition
-        >
-            <div style="background: white; border-radius: 18px; width: 100%; max-width: 600px; padding: 30px; box-shadow: 0 25px 50px rgba(0,0,0,0.3); border: 1px solid var(--border-color);">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px;">
-                    <h3 style="font-size: 19px; font-weight: 800; color: var(--primary-navy); display: flex; align-items: center; gap: 8px;">
-                        <i data-lucide="sliders" style="width:22px; color:var(--accent-blue)"></i> 🎯 Dynamic Custom Excel Exporter
-                    </h3>
-                    <button @click="exportModalOpen = false" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #64748b;">&times;</button>
+        <!-- NEW TAB: SINGLE STUDENT SEARCH & DELETE BY EMAIL -->
+        <div x-show="activeTab === 'student_search'">
+            <div class="card-panel">
+                <div style="margin-bottom: 20px;">
+                    <h2 style="font-size: 20px; font-weight: 800; color: var(--primary-navy); display: flex; align-items: center; gap: 10px;">
+                        <i data-lucide="user-search" style="width:24px; color:var(--accent-blue)"></i> Single Student Search & Quick Delete
+                    </h2>
+                    <p style="color: #64748b; font-size: 13px; margin-top: 4px;">
+                        Enter a student's email address below to inspect full record details and delete or update that single student.
+                    </p>
                 </div>
 
-                <div style="background: #fef2f2; border-left: 4px solid #ef4444; color: #991b1b; padding: 10px 14px; border-radius: 6px; font-size: 12px; margin-bottom: 20px;">
-                    ⚠️ <strong>Export Rule Active</strong>: Rows with blank Phone number OR blank Email address are automatically excluded from exports!
-                </div>
-
-                <!-- Selectors -->
-                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px;">
-                    <div>
-                        <label style="display: block; font-size: 12px; font-weight: 700; color: var(--primary-navy); margin-bottom: 4px;">
-                            1. Select Data Source:
-                        </label>
-                        <select x-model="exportTarget" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 13px;">
-                            <option value="current">Current Cleaned Workbook File (<span x-text="processedData.length"></span> rows)</option>
-                            <option value="vault">MySQL Database Vault (<span x-text="dbLeads.length"></span> total rows)</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label style="display: block; font-size: 12px; font-weight: 700; color: var(--primary-navy); margin-bottom: 4px;">
-                            2. Filter by Category:
-                        </label>
-                        <select x-model="exportCategoryFilter" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 13px;">
-                            <option value="ALL">All Categories</option>
-                            <option value="Data Analyst and Scientist">Data Analyst & Scientist</option>
-                            <option value="Accounting and Taxation">Accounting & Taxation</option>
-                            <option value="Full Stack Developer">Full Stack Developer</option>
-                            <option value="Other">Other</option>
-                        </select>
-                    </div>
-
-                    <div style="grid-column: span 2;">
-                        <label style="display: block; font-size: 12px; font-weight: 700; color: var(--primary-navy); margin-bottom: 4px;">
-                            3. Filter by Lead Source:
-                        </label>
-                        <select x-model="exportSourceFilter" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 13px;">
-                            <option value="ALL">All Sources (Google, Facebook, Insta, etc.)</option>
-                            <template x-for="s in uniqueSources" :key="s">
-                                <option :value="s" x-text="s"></option>
-                            </template>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Column Checkboxes -->
-                <div style="margin-bottom: 25px;">
-                    <label style="display: block; font-size: 13px; font-weight: 700; color: var(--primary-navy); margin-bottom: 10px;">
-                        4. Select Columns to Include in Excel Output:
+                <!-- Search Input Box -->
+                <div style="background: #f8fafc; border-radius: 12px; padding: 20px; border: 1px solid var(--border-color); margin-bottom: 25px;">
+                    <label style="display: block; font-size: 13px; font-weight: 700; color: var(--primary-navy); margin-bottom: 8px;">
+                        Search Student by Email Address:
                     </label>
-
-                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; background: #f8fafc; padding: 16px; border-radius: 12px; border: 1px solid var(--border-color);">
-                        <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; cursor: pointer;">
-                            <input type="checkbox" x-model="exportCols.name" style="width: 18px; height: 18px;">
-                            👤 Student Name
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; cursor: pointer;">
-                            <input type="checkbox" x-model="exportCols.mob" style="width: 18px; height: 18px;">
-                            📞 Mob / Phone Number
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; cursor: pointer;">
-                            <input type="checkbox" x-model="exportCols.email" style="width: 18px; height: 18px;">
-                            ✉️ Email Address
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; cursor: pointer;">
-                            <input type="checkbox" x-model="exportCols.source" style="width: 18px; height: 18px;">
-                            🌐 Lead Source
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; cursor: pointer;">
-                            <input type="checkbox" x-model="exportCols.date" style="width: 18px; height: 18px;">
-                            📅 Date
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; cursor: pointer;">
-                            <input type="checkbox" x-model="exportCols.month" style="width: 18px; height: 18px;">
-                            🗓️ Month
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; cursor: pointer;">
-                            <input type="checkbox" x-model="exportCols.course" style="width: 18px; height: 18px;">
-                            🎓 Raw Course
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; cursor: pointer;">
-                            <input type="checkbox" x-model="exportCols.category" style="width: 18px; height: 18px;">
-                            🏷️ Major Category
-                        </label>
+                    <div style="display: flex; gap: 12px;">
+                        <input 
+                            type="text" 
+                            placeholder="Enter email e.g. rahul.sharma@gmail.com or priya..." 
+                            x-model="studentSearchEmail" 
+                            @keyup.enter="searchStudentByEmail()"
+                            style="flex: 1; padding: 12px 18px; border-radius: 50px; border: 1px solid var(--border-color); font-size: 14px; outline: none; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);"
+                        >
+                        <button class="btn btn-primary" @click="searchStudentByEmail()" style="padding: 12px 28px;">
+                            <i data-lucide="search" style="width:18px"></i> Search Student
+                        </button>
                     </div>
                 </div>
 
-                <!-- Action Buttons -->
-                <div style="display: flex; gap: 12px; justify-content: flex-end;">
-                    <button class="btn btn-outline" @click="exportModalOpen = false">Cancel</button>
-                    <button class="btn btn-gold" @click="triggerDynamicExport()">
-                        <i data-lucide="download" style="width:18px"></i> Download Filtered Excel (.xlsx) &rarr;
+                <!-- Search Results Area -->
+                <template x-if="searchedStudentResults.length > 0">
+                    <div>
+                        <div style="margin-bottom: 15px; font-size: 14px; font-weight: 700; color: var(--primary-navy);">
+                            Found <span x-text="searchedStudentResults.length"></span> Matching Student Record(s):
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+                            <template x-for="st in searchedStudentResults" :key="st.id">
+                                <div style="background: white; border-radius: 14px; padding: 22px; border: 1px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+                                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                                        <div>
+                                            <h3 style="font-size: 17px; font-weight: 700; color: var(--primary-navy);" x-text="st.name || 'Unnamed Student'"></h3>
+                                            <div style="font-size: 13px; font-weight: 600; color: var(--accent-blue);" x-text="st.email || 'No Email Provided'"></div>
+                                        </div>
+                                        <span 
+                                            :style="st.status === 'Enrolled' ? 'background:#dcfce7; color:#16a34a' : (st.status === 'Visited' ? 'background:#fef3c7; color:#d97706' : 'background:#f1f5f9; color:#475569')"
+                                            style="padding: 3px 12px; border-radius: 12px; font-size: 12px; font-weight: 700;" 
+                                            x-text="st.status">
+                                        </span>
+                                    </div>
+
+                                    <div style="font-size: 13px; color: #475569; display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; background: #f8fafc; padding: 14px; border-radius: 10px;">
+                                        <div>📞 Phone: <strong style="font-family:monospace;" x-text="st.mob"></strong></div>
+                                        <div>🎓 Course: <strong x-text="st.raw_course"></strong></div>
+                                        <div>🌐 Source: <strong x-text="st.source"></strong></div>
+                                        <div>📅 Date: <strong x-text="st.date"></strong></div>
+                                        <div>🗓️ Year/Qtr: <strong x-text="(st.year || '') + ' ' + (st.quarter || '')"></strong></div>
+                                        <div>🏷️ Category: <strong x-text="st.major_category"></strong></div>
+                                    </div>
+
+                                    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                                        <button class="btn btn-outline" style="padding: 7px 16px; font-size: 12px;" @click="openEditLeadModal(st)">
+                                            ✏️ Edit Student
+                                        </button>
+                                        <button class="btn" style="background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 7px 16px; font-size: 12px; border-radius: 50px;" @click="deleteSingleStudentSearched(st.id, st.email)">
+                                            <i data-lucide="trash-2" style="width:14px"></i> Delete Student
+                                        </button>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- TAB 3: EXECUTIVE POWER-BI STYLE ANALYTICS DASHBOARD -->
+        <div x-show="activeTab === 'analytics'">
+            
+            <!-- Dashboard Header Title & Quick Actions Bar -->
+            <div style="background: linear-gradient(135deg, #05194d 0%, #082a7d 100%); border-radius: 16px; padding: 24px 28px; margin-bottom: 25px; color: white; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; box-shadow: 0 10px 30px rgba(5,25,77,0.2);">
+                <div>
+                    <h2 style="font-size: 22px; font-weight: 800; color: white; display: flex; align-items: center; gap: 10px; margin: 0;">
+                        <i data-lucide="layout-dashboard" style="width:26px; color:#38bdf8"></i> CONTOSO - Lead Volume & Conversion Dashboard
+                    </h2>
+                    <p style="color: #93c5fd; font-size: 13px; margin-top: 4px;">
+                        Real-time Data Intelligence Engine & Performance Visualizations
+                    </p>
+                </div>
+
+                <div style="display: flex; gap: 12px;">
+                    <button class="btn" style="background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); font-size: 13px;" @click="renderCharts()">
+                        <i data-lucide="refresh-cw" style="width:16px"></i> Refresh Charts
+                    </button>
+                    <button class="btn btn-gold" @click="openExportModal('vault')">
+                        <i data-lucide="download" style="width:16px"></i> Export BI Report
                     </button>
                 </div>
             </div>
+
+            <!-- Top Row: 5 KPI Summary Executive Cards -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 25px;">
+                <!-- Total Leads Card -->
+                <div style="background: white; border-radius: 14px; padding: 20px; border: 1px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Total Leads</span>
+                        <div style="width: 32px; height: 32px; border-radius: 8px; background: #e0f2fe; color: #0284c7; display: flex; align-items: center; justify-content: center;">
+                            <i data-lucide="users" style="width:18px"></i>
+                        </div>
+                    </div>
+                    <div style="font-size: 30px; font-weight: 800; color: var(--primary-navy);" x-text="analyticsMetrics.total_leads || (dbLeads.length || processedData.length || 0)"></div>
+                    <div style="font-size: 11.5px; color: #16a34a; font-weight: 700; margin-top: 4px;">📈 100% Compiled Sheet Data</div>
+                </div>
+
+                <!-- Confirmed / Enrolled Card -->
+                <div style="background: white; border-radius: 14px; padding: 20px; border: 1px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-size: 11px; font-weight: 700; color: #15803d; text-transform: uppercase;">Enrolled & Confirmed</span>
+                        <div style="width: 32px; height: 32px; border-radius: 8px; background: #dcfce7; color: #16a34a; display: flex; align-items: center; justify-content: center;">
+                            <i data-lucide="check-circle" style="width:18px"></i>
+                        </div>
+                    </div>
+                    <div style="font-size: 30px; font-weight: 800; color: #15803d;" x-text="analyticsMetrics.enrolled || 0"></div>
+                    <div style="font-size: 11.5px; color: #15803d; font-weight: 700; margin-top: 4px;">🎯 High Intent Conversion</div>
+                </div>
+
+                <!-- Visited & Demos Card -->
+                <div style="background: white; border-radius: 14px; padding: 20px; border: 1px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-size: 11px; font-weight: 700; color: #b45309; text-transform: uppercase;">Visited & Scheduled</span>
+                        <div style="width: 32px; height: 32px; border-radius: 8px; background: #fef3c7; color: #d97706; display: flex; align-items: center; justify-content: center;">
+                            <i data-lucide="map-pin" style="width:18px"></i>
+                        </div>
+                    </div>
+                    <div style="font-size: 30px; font-weight: 800; color: #b45309;" x-text="analyticsMetrics.visited || 0"></div>
+                    <div style="font-size: 11.5px; color: #d97706; font-weight: 700; margin-top: 4px;">🚗 Campus Visits Completed</div>
+                </div>
+
+                <!-- Actionable Follow-ups -->
+                <div style="background: white; border-radius: 14px; padding: 20px; border: 1px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-size: 11px; font-weight: 700; color: #1d4ed8; text-transform: uppercase;">Active Follow-ups</span>
+                        <div style="width: 32px; height: 32px; border-radius: 8px; background: #eff6ff; color: #2563eb; display: flex; align-items: center; justify-content: center;">
+                            <i data-lucide="phone-call" style="width:18px"></i>
+                        </div>
+                    </div>
+                    <div style="font-size: 30px; font-weight: 800; color: #1d4ed8;" x-text="analyticsMetrics.active_followups || 0"></div>
+                    <div style="font-size: 11.5px; color: #2563eb; font-weight: 700; margin-top: 4px;">📞 Will Visit / Call Later</div>
+                </div>
+
+                <!-- Cold / No Need to Call Card -->
+                <div style="background: white; border-radius: 14px; padding: 20px; border: 1px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-size: 11px; font-weight: 700; color: #b91c1c; text-transform: uppercase;">No Need to Call</span>
+                        <div style="width: 32px; height: 32px; border-radius: 8px; background: #fee2e2; color: #dc2626; display: flex; align-items: center; justify-content: center;">
+                            <i data-lucide="x-circle" style="width:18px"></i>
+                        </div>
+                    </div>
+                    <div style="font-size: 30px; font-weight: 800; color: #b91c1c;" x-text="analyticsMetrics.no_need_to_call || 0"></div>
+                    <div style="font-size: 11.5px; color: #dc2626; font-weight: 700; margin-top: 4px;">🚫 Cold & Excluded Data</div>
+                </div>
+            </div>
+
+            <!-- DASHBOARD FILTER BAR & CHARTS GRID -->
+            <div style="display: flex; gap: 20px; align-items: flex-start;">
+                
+                <!-- Left PowerBI-Style Control Panel Filters -->
+                <div style="width: 240px; flex-shrink: 0; background: white; border-radius: 14px; padding: 20px; border: 1px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+                    <div style="font-size: 13px; font-weight: 800; color: var(--primary-navy); margin-bottom: 15px; display: flex; align-items: center; gap: 6px;">
+                        <i data-lucide="filter" style="width:16px"></i> Dashboard Filters
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 14px;">
+                        <div>
+                            <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">📅 Select Year:</label>
+                            <select x-model="dashYearFilter" @change="renderCharts()" style="width: 100%; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 12.5px; font-weight: 600;">
+                                <option value="ALL">All Years</option>
+                                <option value="2024">2024</option>
+                                <option value="2025">2025</option>
+                                <option value="2026">2026</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">🗓️ Select Quarter:</label>
+                            <select x-model="dashQuarterFilter" @change="renderCharts()" style="width: 100%; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 12.5px; font-weight: 600;">
+                                <option value="ALL">All Quarters</option>
+                                <option value="Q1">Q1 (Jan - Mar)</option>
+                                <option value="Q2">Q2 (Apr - Jun)</option>
+                                <option value="Q3">Q3 (Jul - Sep)</option>
+                                <option value="Q4">Q4 (Oct - Dec)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">🎓 Major Category:</label>
+                            <select x-model="dashCategoryFilter" @change="renderCharts()" style="width: 100%; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 12.5px; font-weight: 600;">
+                                <option value="ALL">All Categories</option>
+                                <option value="Data Analyst and Scientist">Data Analyst & Scientist</option>
+                                <option value="Accounting and Taxation">Accounting & Taxation</option>
+                                <option value="Full Stack Developer">Full Stack Developer</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">🌐 Lead Source:</label>
+                            <select x-model="dashSourceFilter" @change="renderCharts()" style="width: 100%; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 12.5px; font-weight: 600;">
+                                <option value="ALL">All Sources</option>
+                                <option value="Google">Google</option>
+                                <option value="Facebook">Facebook</option>
+                                <option value="Instagram">Instagram</option>
+                                <option value="Website">Website</option>
+                                <option value="WhatsApp">WhatsApp</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label style="font-size: 11.5px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">🏷️ Final Status:</label>
+                            <select x-model="dashStatusFilter" @change="renderCharts()" style="width: 100%; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 12.5px; font-weight: 600;">
+                                <option value="ALL">All Statuses</option>
+                                <option value="Will Visit">Will Visit</option>
+                                <option value="Will Confirm">Will Confirm</option>
+                                <option value="NP">NP (No Pick)</option>
+                                <option value="Call Later">Call Later</option>
+                                <option value="Enrolled">Enrolled</option>
+                                <option value="Visited">Visited</option>
+                            </select>
+                        </div>
+
+                        <button class="btn btn-outline" style="width: 100%; margin-top: 5px; font-size: 12px; padding: 8px;" @click="resetDashFilters()">
+                            🔄 Reset Filters
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Right 2x3 Grid of Interactive Charts -->
+                <div style="flex: 1; display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+
+                    <!-- Chart 1: Donut Chart - Leads by Major Category -->
+                    <div style="background: white; border-radius: 14px; padding: 20px; border: 1px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+                        <div style="font-size: 14px; font-weight: 700; color: var(--primary-navy); margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between;">
+                            <span>🍩 Leads by Major Category</span>
+                            <span style="font-size: 11px; background: #e0f2fe; color: #0284c7; padding: 2px 8px; border-radius: 10px; font-weight: 700;">Category Share</span>
+                        </div>
+                        <div style="height: 240px; position: relative;">
+                            <canvas id="chartCategory"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Chart 2: Donut Chart - Final Status Breakdown -->
+                    <div style="background: white; border-radius: 14px; padding: 20px; border: 1px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+                        <div style="font-size: 14px; font-weight: 700; color: var(--primary-navy); margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between;">
+                            <span>🍩 Final Status Distribution</span>
+                            <span style="font-size: 11px; background: #dcfce7; color: #16a34a; padding: 2px 8px; border-radius: 10px; font-weight: 700;">Status Breakdown</span>
+                        </div>
+                        <div style="height: 240px; position: relative;">
+                            <canvas id="chartStatus"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Chart 3: Horizontal Bar Chart - Top Lead Sources -->
+                    <div style="background: white; border-radius: 14px; padding: 20px; border: 1px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+                        <div style="font-size: 14px; font-weight: 700; color: var(--primary-navy); margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between;">
+                            <span>📊 Top Lead Sources Performance</span>
+                            <span style="font-size: 11px; background: #fef3c7; color: #d97706; padding: 2px 8px; border-radius: 10px; font-weight: 700;">Lead Inflow</span>
+                        </div>
+                        <div style="height: 240px; position: relative;">
+                            <canvas id="chartSource"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Chart 4: Monthly Trend Line Chart -->
+                    <div style="background: white; border-radius: 14px; padding: 20px; border: 1px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+                        <div style="font-size: 14px; font-weight: 700; color: var(--primary-navy); margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between;">
+                            <span>📈 Monthly Lead Volume Trend</span>
+                            <span style="font-size: 11px; background: #f3e8ff; color: #7c3aed; padding: 2px 8px; border-radius: 10px; font-weight: 700;">Timeline</span>
+                        </div>
+                        <div style="height: 240px; position: relative;">
+                            <canvas id="chartMonthlyTrend"></canvas>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
         </div>
+
+    </div>
+
+    <!-- DYNAMIC CUSTOM EXPORT MODAL -->
+    <div x-show="exportModalOpen" style="position: fixed; inset: 0; background: rgba(5,25,77,0.7); backdrop-filter: blur(6px); z-index: 999; display: flex; align-items: center; justify-content: center; padding: 20px;" x-transition>
+        <div style="background: white; border-radius: 18px; width: 100%; max-width: 650px; padding: 28px; box-shadow: 0 25px 50px rgba(0,0,0,0.3);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+                <h3 style="font-size: 18px; font-weight: 800; color: var(--primary-navy); display: flex; align-items: center; gap: 8px;">
+                    🎯 Custom Dynamic Lead Exporter
+                </h3>
+                <button @click="exportModalOpen = false" style="background: none; border: none; font-size: 22px; cursor: pointer; color: #64748b;">&times;</button>
+            </div>
+
+            <!-- Export Filters Bar (Category, Status, Source) -->
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 18px; background: #f8fafc; padding: 16px; border-radius: 12px; border: 1px solid var(--border-color);">
+                <div>
+                    <label style="font-size: 12px; font-weight: 700; color: var(--primary-navy); display: block; margin-bottom: 4px;">🎓 Category Filter:</label>
+                    <select x-model="exportCategoryFilter" style="width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 13px;">
+                        <option value="ALL">All Categories</option>
+                        <option value="Data Analyst and Scientist">Data Analyst & Scientist</option>
+                        <option value="Accounting and Taxation">Accounting & Taxation</option>
+                        <option value="Full Stack Developer">Full Stack Developer</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label style="font-size: 12px; font-weight: 700; color: var(--primary-navy); display: block; margin-bottom: 4px;">🏷️ Final Status Filter:</label>
+                    <select x-model="exportStatusFilter" style="width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 13px;">
+                        <option value="ALL">All Statuses</option>
+                        <option value="Will Visit">Will Visit</option>
+                        <option value="Will Confirm">Will Confirm</option>
+                        <option value="NP">NP (No Pick)</option>
+                        <option value="Call Later">Call Later</option>
+                        <option value="Enrolled">Enrolled</option>
+                        <option value="Visited">Visited</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label style="font-size: 12px; font-weight: 700; color: var(--primary-navy); display: block; margin-bottom: 4px;">🌐 Source Filter:</label>
+                    <select x-model="exportSourceFilter" style="width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 13px;">
+                        <option value="ALL">All Sources</option>
+                        <option value="Google">Google</option>
+                        <option value="Facebook">Facebook</option>
+                        <option value="Instagram">Instagram</option>
+                        <option value="Website">Website</option>
+                        <option value="WhatsApp">WhatsApp</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Ignore / Exclusion Rules Panel -->
+            <div style="margin-bottom: 20px; background: #eff6ff; border: 1px solid #bfdbfe; padding: 16px; border-radius: 12px;">
+                <div style="font-size: 13px; font-weight: 800; color: #1e40af; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+                    🛡️ Automatic Lead Exclusion Rules during Export:
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; font-size: 12.5px; color: #1e3a8a;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600;">
+                        <input type="checkbox" x-model="exportIgnoreEnrolled" style="width: 16px; height: 16px;">
+                        🚫 Ignore / Exclude "Enrolled"
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600;">
+                        <input type="checkbox" x-model="exportIgnoreNoNeedToCall" style="width: 16px; height: 16px;">
+                        🚫 Ignore / Exclude "No Need to Call"
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600;">
+                        <input type="checkbox" x-model="exportIgnoreStudentData" style="width: 16px; height: 16px;">
+                        🚫 Ignore / Exclude "Student Data"
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600;">
+                        <input type="checkbox" x-model="exportSkipBlankContact" style="width: 16px; height: 16px;">
+                        🚫 Exclude Rows Missing Phone OR Email
+                    </label>
+                </div>
+            </div>
+
+            <!-- Column Checkboxes -->
+            <div style="margin-bottom: 20px;">
+                <label style="font-size: 13px; font-weight: 700; color: var(--primary-navy); display: block; margin-bottom: 8px;">
+                    Select Columns to Include in Export File:
+                </label>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; font-size: 12.5px;">
+                    <label><input type="checkbox" x-model="exportCols.name"> Name</label>
+                    <label><input type="checkbox" x-model="exportCols.mob"> Phone / Mob</label>
+                    <label><input type="checkbox" x-model="exportCols.email"> Email Address</label>
+                    <label><input type="checkbox" x-model="exportCols.course"> Course</label>
+                    <label><input type="checkbox" x-model="exportCols.category"> Major Category</label>
+                    <label><input type="checkbox" x-model="exportCols.source"> Lead Source</label>
+                    <label><input type="checkbox" x-model="exportCols.status"> Final Status</label>
+                    <label><input type="checkbox" x-model="exportCols.date"> Date</label>
+                    <label><input type="checkbox" x-model="exportCols.year"> Year & Quarter</label>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 12px; justify-content: flex-end; border-top: 1px solid var(--border-color); padding-top: 15px;">
+                <button class="btn btn-outline" @click="exportModalOpen = false">Cancel</button>
+                <button class="btn btn-primary" @click="triggerStreamCsvExport()">⚡ Stream CSV Download</button>
+                <button class="btn btn-gold" @click="triggerDynamicExport()">📊 Download Excel (.xlsx)</button>
+            </div>
+        </div>
+    </div>
 
 </div>
 
 <script>
-function cleanerApp() {
-    return {
-        activeTab: 'cleaner',
-        importType: 'file',
-        googleUrl: '',
-        fileName: '',
-        headers: [],
-        rawDataset: [],
-        processedData: [],
-        dbLeads: [],
-        loading: false,
-        successMsg: '',
-        categoryFilter: 'ALL',
-        sourceFilter: 'ALL',
-        vaultCategoryFilter: 'ALL',
-        vaultSourceFilter: 'ALL',
-        searchTerm: '',
-        hideDuplicates: false,
-        page: 1,
-        pageSize: 20,
+const cleanerDataDefinition = {
+    activeTab: 'analytics',
+    importType: 'file',
+    fileName: '',
+    headers: [],
+    rawDataset: [],
+    processedData: [],
+    dbLeads: [],
 
-        // DYNAMIC EXPORT MODAL STATE
-        exportModalOpen: false,
-        exportTarget: 'current',
-        exportCategoryFilter: 'ALL',
-        exportSourceFilter: 'ALL',
-        exportCols: {
-            name: true,
-            mob: true,
-            email: true,
-            source: true,
-            date: true,
-            month: true,
-            course: true,
-            category: true
-        },
+    page: 1,
+    pageSize: 50,
 
-        mappings: {
-            nameCol: '',
-            emailCol: '',
-            phoneCol: '',
-            dateCol: '',
-            courseCol: '',
-            sourceCol: ''
-        },
+    mappings: {
+        nameCol: '',
+        phoneCol: '',
+        emailCol: '',
+        dateCol: '',
+        courseCol: '',
+        sourceCol: '',
+        statusCol: ''
+    },
 
-        COURSE_MAP: {
-            'AI': 'Data Analyst and Scientist',
-            'DA+CGAI': 'Data Analyst and Scientist',
-            'MSO+M-DA': 'Data Analyst and Scientist',
-            'MIS+ASQ': 'Data Analyst and Scientist',
-            'C-DA': 'Data Analyst and Scientist',
-            'M-DA': 'Data Analyst and Scientist',
-            'EX-DA': 'Data Analyst and Scientist',
-            'EX': 'Data Analyst and Scientist',
-            'ORACLE': 'Data Analyst and Scientist',
-            'DA+DATA SCIENCE': 'Data Analyst and Scientist',
-            'AD EX+PBI': 'Data Analyst and Scientist',
-            'CBDA': 'Data Analyst and Scientist',
-            'MIS+PBI': 'Data Analyst and Scientist',
-            'PBI': 'Data Analyst and Scientist',
-            'MIS': 'Data Analyst and Scientist',
-            'ASQL': 'Data Analyst and Scientist',
-            'BSQL': 'Data Analyst and Scientist',
-            'M-DA+VBA': 'Data Analyst and Scientist',
-            'AD EX+PBI+ASQL': 'Data Analyst and Scientist',
-            'MSO+MIS': 'Data Analyst and Scientist',
-            'ADVANCE EXCEL+VBA': 'Data Analyst and Scientist',
-            'MSO+AD EXCEL': 'Data Analyst and Scientist',
-            'ACBDA': 'Data Analyst and Scientist',
-            'DATA ANALYTICS': 'Data Analyst and Scientist',
-            'EX+SQL': 'Data Analyst and Scientist',
-            'MCDA': 'Data Analyst and Scientist',
-            'AD EX+PBI+BSQL': 'Data Analyst and Scientist',
-            'EX+PBI+ASQL': 'Data Analyst and Scientist',
-            'MCBDA': 'Data Analyst and Scientist',
-            'MDA': 'Data Analyst and Scientist',
-            'MDA+CDS': 'Data Analyst and Scientist',
-            'MDA+PCDS': 'Data Analyst and Scientist',
-            'MDA+CGAI': 'Data Analyst and Scientist',
-            'EX+VBA': 'Data Analyst and Scientist',
-            'CDS': 'Data Analyst and Scientist',
-            'PCDS': 'Data Analyst and Scientist',
-            'CGA': 'Data Analyst and Scientist',
-            'CGAI': 'Data Analyst and Scientist',
-            'MIS+TALLY': 'Data Analyst and Scientist',
-            'PYCA': 'Data Analyst and Scientist',
-            'DATA SCIENCE': 'Data Analyst and Scientist',
-            'PBI+MI': 'Data Analyst and Scientist',
-            'PBI+ASQL': 'Data Analyst and Scientist'
-        },
+    // DASHBOARD FILTERS STATE
+    dashYearFilter: 'ALL',
+    dashQuarterFilter: 'ALL',
+    dashCategoryFilter: 'ALL',
+    dashSourceFilter: 'ALL',
+    dashStatusFilter: 'ALL',
 
-        initData() {
-            this.loadDatabaseVault();
-            setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 100);
-        },
+    vaultCategoryFilter: 'ALL',
+    vaultSourceFilter: 'ALL',
+    vaultYearFilter: 'ALL',
+    vaultQuarterFilter: 'ALL',
+    vaultStatusFilter: 'ALL',
 
-        get uniqueSources() {
-            const sources = new Set();
-            this.processedData.forEach(r => {
-                if (r.Source) sources.add(r.Source);
+    studentSearchEmail: '',
+    searchedStudentResults: [],
+    searchedStudentTriggered: false,
+
+    editLeadModalOpen: false,
+    editLeadForm: { id: null, name: '', mob: '', email: '', raw_course: '', source: '', status: '', date: '' },
+
+    analyticsMetrics: {},
+    chartInstances: {},
+
+    // EXPORT MODAL STATE WITH EXCLUSION RULES
+    exportModalOpen: false,
+    exportTarget: 'vault',
+    exportCategoryFilter: 'ALL',
+    exportStatusFilter: 'ALL',
+    exportSourceFilter: 'ALL',
+    exportIgnoreEnrolled: true,
+    exportIgnoreNoNeedToCall: true,
+    exportIgnoreStudentData: true,
+    exportSkipBlankContact: true,
+    exportCols: {
+        name: true,
+        mob: true,
+        email: true,
+        course: true,
+        category: true,
+        source: true,
+        status: true,
+        date: true,
+        year: true
+    },
+
+    initData() {
+        this.loadDatabaseVault();
+        this.loadAnalyticsSummary();
+        setTimeout(() => this.renderCharts(), 500);
+    },
+
+    resetDashFilters() {
+        this.dashYearFilter = 'ALL';
+        this.dashQuarterFilter = 'ALL';
+        this.dashCategoryFilter = 'ALL';
+        this.dashSourceFilter = 'ALL';
+        this.dashStatusFilter = 'ALL';
+        this.renderCharts();
+    },
+
+    renderCharts() {
+        if (typeof Chart === 'undefined') return;
+
+        let dataset = this.dbLeads.length > 0 ? this.dbLeads : this.processedData;
+        if (!dataset || dataset.length === 0) return;
+
+        // Filter dataset by dashboard filters
+        let filtered = dataset.filter(r => {
+            const cat = r.Major_Category || r.major_category;
+            const src = String(r.Source || r.source || '').trim();
+            const yr  = String(r.Year || r.year || '');
+            const qtr = String(r.Quarter || r.quarter || '');
+            const st  = String(r.Status || r.status || '').trim();
+
+            if (this.dashCategoryFilter !== 'ALL' && cat !== this.dashCategoryFilter) return false;
+            if (this.dashSourceFilter !== 'ALL' && !src.toLowerCase().includes(this.dashSourceFilter.toLowerCase())) return false;
+            if (this.dashStatusFilter !== 'ALL' && !st.toLowerCase().includes(this.dashStatusFilter.toLowerCase())) return false;
+            if (this.dashYearFilter !== 'ALL' && yr !== this.dashYearFilter) return false;
+            if (this.dashQuarterFilter !== 'ALL' && qtr !== this.dashQuarterFilter) return false;
+
+            return true;
+        });
+
+        // Update Dynamic Header Metrics
+        let enrolledCount = filtered.filter(r => String(r.Status || r.status || '').toLowerCase().includes('enrol') || String(r.Status || r.status || '').toLowerCase().includes('confirm')).length;
+        let visitedCount = filtered.filter(r => String(r.Status || r.status || '').toLowerCase().includes('visit')).length;
+        let activeFollowups = filtered.filter(r => {
+            let s = String(r.Status || r.status || '').toLowerCase();
+            return s.includes('will') || s.includes('call') || s.includes('expected') || s.includes('next');
+        }).length;
+        let noNeedCount = filtered.filter(r => {
+            let s = String(r.Status || r.status || '').toLowerCase();
+            return s.includes('no need') || s.includes('np') || s.includes('dis') || s.includes('off') || s.includes('service');
+        }).length;
+
+        this.analyticsMetrics = {
+            total_leads: filtered.length,
+            enrolled: enrolledCount,
+            visited: visitedCount,
+            active_followups: activeFollowups,
+            no_need_to_call: noNeedCount
+        };
+
+        // 1. Major Category Donut Chart
+        const catCounts = {};
+        filtered.forEach(r => {
+            const c = r.Major_Category || r.major_category || 'Other';
+            catCounts[c] = (catCounts[c] || 0) + 1;
+        });
+
+        if (this.chartInstances.category) this.chartInstances.category.destroy();
+        const ctxCat = document.getElementById('chartCategory');
+        if (ctxCat) {
+            this.chartInstances.category = new Chart(ctxCat, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(catCounts),
+                    datasets: [{
+                        data: Object.values(catCounts),
+                        backgroundColor: ['#0284c7', '#059669', '#7c3aed', '#d97706', '#64748b'],
+                        borderWidth: 2
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
             });
-            return Array.from(sources);
-        },
+        }
 
-        get uniqueVaultSources() {
-            const sources = new Set();
-            this.dbLeads.forEach(r => {
-                const s = r.Source || r.source || 'Direct/Organic';
-                sources.add(s);
+        // 2. Final Status Distribution Donut Chart
+        const stCounts = {};
+        filtered.forEach(r => {
+            const s = r.Status || r.status || 'Blank / Direct';
+            if (s) stCounts[s] = (stCounts[s] || 0) + 1;
+        });
+        const topStKeys = Object.keys(stCounts).sort((a,b) => stCounts[b] - stCounts[a]).slice(0, 7);
+
+        if (this.chartInstances.status) this.chartInstances.status.destroy();
+        const ctxSt = document.getElementById('chartStatus');
+        if (ctxSt) {
+            this.chartInstances.status = new Chart(ctxSt, {
+                type: 'doughnut',
+                data: {
+                    labels: topStKeys,
+                    datasets: [{
+                        data: topStKeys.map(k => stCounts[k]),
+                        backgroundColor: ['#2467ec', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899'],
+                        borderWidth: 2
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
             });
-            return Array.from(sources);
-        },
+        }
 
-        openExportModal(target) {
-            this.exportTarget = target;
-            this.exportModalOpen = true;
-            setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 50);
-        },
+        // 3. Top Lead Sources Horizontal Bar Chart
+        const srcCounts = {};
+        filtered.forEach(r => {
+            const s = r.Source || r.source || 'Direct/Organic';
+            srcCounts[s] = (srcCounts[s] || 0) + 1;
+        });
+        const srcKeys = Object.keys(srcCounts).sort((a,b) => srcCounts[b] - srcCounts[a]).slice(0, 6);
 
-        triggerDynamicExport() {
-            let source = (this.exportTarget === 'vault') ? this.dbLeads : this.processedData;
-            
-            if (this.exportTarget === 'current' && this.hideDuplicates) {
-                source = source.filter(r => !r.is_duplicate);
+        if (this.chartInstances.source) this.chartInstances.source.destroy();
+        const ctxSrc = document.getElementById('chartSource');
+        if (ctxSrc) {
+            this.chartInstances.source = new Chart(ctxSrc, {
+                type: 'bar',
+                data: {
+                    labels: srcKeys,
+                    datasets: [{
+                        label: 'Total Inflow Leads',
+                        data: srcKeys.map(k => srcCounts[k]),
+                        backgroundColor: '#0284c7',
+                        borderRadius: 6
+                    }]
+                },
+                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+        }
+
+        // 4. Monthly Lead Volume Trend Line Chart (Smooth Spline Area)
+        const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        const monthlyData = months.map(m => {
+            return filtered.filter(r => (r.Month || r.month) === m).length;
+        });
+
+        if (this.chartInstances.trend) this.chartInstances.trend.destroy();
+        const ctxTrend = document.getElementById('chartMonthlyTrend');
+        if (ctxTrend) {
+            this.chartInstances.trend = new Chart(ctxTrend, {
+                type: 'line',
+                data: {
+                    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+                    datasets: [{
+                        label: 'Monthly Lead Inflow',
+                        data: monthlyData,
+                        tension: 0.4,
+                        fill: true,
+                        backgroundColor: 'rgba(36, 103, 236, 0.12)',
+                        borderColor: '#2467ec',
+                        borderWidth: 3,
+                        pointBackgroundColor: '#05194d'
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+        }
+    },
+
+    autoMapHeaders() {
+        if (!this.headers || this.headers.length === 0) return;
+
+        this.mappings = { nameCol: '', phoneCol: '', emailCol: '', dateCol: '', courseCol: '', sourceCol: '', statusCol: '' };
+
+        this.headers.forEach(h => {
+            const cleanH = String(h).toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+
+            if (!this.mappings.nameCol && (cleanH.includes('name') || cleanH.includes('candidate') || cleanH.includes('student') || cleanH.includes('person'))) {
+                this.mappings.nameCol = h;
             }
-
-            if (this.exportCategoryFilter !== 'ALL') {
-                source = source.filter(r => (r.Major_Category || r.major_category) === this.exportCategoryFilter);
+            if (!this.mappings.phoneCol && (cleanH.includes('phone') || cleanH.includes('mob') || cleanH.includes('mobile') || cleanH.includes('contact') || cleanH.includes('whatsapp') || cleanH.includes('ph'))) {
+                this.mappings.phoneCol = h;
             }
-
-            if (this.exportSourceFilter !== 'ALL') {
-                source = source.filter(r => (r.Source || r.source) === this.exportSourceFilter);
+            if (!this.mappings.emailCol && (cleanH.includes('email') || cleanH.includes('mail') || cleanH.includes('gmail'))) {
+                this.mappings.emailCol = h;
             }
+            if (!this.mappings.dateCol && (cleanH.includes('date') || cleanH.includes('reg') || cleanH.includes('created') || cleanH.includes('time'))) {
+                this.mappings.dateCol = h;
+            }
+            if (!this.mappings.courseCol && (cleanH.includes('course') || cleanH.includes('subject') || cleanH.includes('program') || cleanH.includes('stream'))) {
+                this.mappings.courseCol = h;
+            }
+            if (!this.mappings.sourceCol && (cleanH.includes('source') || cleanH.includes('platform') || cleanH.includes('channel') || cleanH.includes('vendor') || cleanH.includes('medium'))) {
+                this.mappings.sourceCol = h;
+            }
+        });
 
-            // STRICT RULE: EXCLUDE / AVOID ROWS WHERE PHONE OR EMAIL IS BLANK
-            const validLeads = source.filter(r => {
-                const phone = String(r.Mob || r.mob || '').trim();
-                const email = String(r.Email || r.email || '').trim();
-                return phone !== '' && email !== '';
+        // Smart status column auto-detection (Prioritize exact 'Final Status')
+        const exactFinal = this.headers.find(h => String(h).trim().toLowerCase() === 'final status' || String(h).trim().toLowerCase() === 'final_status');
+        if (exactFinal) {
+            this.mappings.statusCol = exactFinal;
+        } else {
+            this.headers.forEach(h => {
+                const cleanH = String(h).toLowerCase().trim();
+                if (cleanH.includes('fresher') || cleanH.includes('experience') || cleanH.includes('marital') || cleanH.includes('degree') || cleanH.includes('gender')) return;
+
+                if (!this.mappings.statusCol && (cleanH === 'final status' || cleanH === 'final_status' || cleanH === 'final disposition' || cleanH === 'lead status' || cleanH === 'disposition' || cleanH === 'call status' || cleanH === 'status' || cleanH === 'stage')) {
+                    this.mappings.statusCol = h;
+                }
             });
 
-            if (validLeads.length === 0) {
-                return alert('No matching records found that have BOTH a valid Phone Number and valid Email!');
-            }
+            if (!this.mappings.statusCol) {
+                this.headers.forEach(h => {
+                    const cleanH = String(h).toLowerCase().trim();
+                    if (cleanH.includes('fresher') || cleanH.includes('experience') || cleanH.includes('marital') || cleanH.includes('degree')) return;
 
-            const dynamicRows = validLeads.map(r => {
-                const rowObj = {};
-                if (this.exportCols.name) rowObj['Name'] = r.Name || r.name || '';
-                if (this.exportCols.mob) rowObj['Mob'] = r.Mob || r.mob || '';
-                if (this.exportCols.email) rowObj['Email'] = r.Email || r.email || '';
-                if (this.exportCols.source) rowObj['Source'] = r.Source || r.source || 'Direct/Organic';
-                if (this.exportCols.date) rowObj['Date'] = r.Date || r.date || '';
-                if (this.exportCols.month) rowObj['Month'] = r.Month || r.month || '';
-                if (this.exportCols.course) rowObj['Raw Course'] = r.Raw_Course || r.raw_course || '';
-                if (this.exportCols.category) rowObj['Major Category'] = r.Major_Category || r.major_category || '';
-                return rowObj;
-            });
-
-            const ws = XLSX.utils.json_to_sheet(dynamicRows);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Filtered_Valid_Leads");
-
-            const filename = `Clean_Leads_Export_${new Date().toISOString().slice(0,10)}.xlsx`;
-            XLSX.writeFile(wb, filename, { bookType: 'xlsx' });
-
-            this.exportModalOpen = false;
-        },
-
-        loadDatabaseVault() {
-            fetch('/api/database-leads')
-                .then(r => r.json())
-                .then(res => {
-                    if (res.success) {
-                        this.dbLeads = res.leads;
-                    }
-                })
-                .catch(() => {
-                    const stored = localStorage.getItem('f1mtech_db_leads');
-                    if (stored) {
-                        try { this.dbLeads = JSON.parse(stored); } catch(e) { this.dbLeads = []; }
+                    if (!this.mappings.statusCol && (cleanH.includes('final') || cleanH.includes('status') || cleanH.includes('disposition') || cleanH.includes('remark') || cleanH.includes('stage'))) {
+                        this.mappings.statusCol = h;
                     }
                 });
-        },
+            }
+        }
 
-        saveToDatabaseVault() {
-            const uniqueLeads = this.processedData.filter(r => !r.is_duplicate);
-            if (uniqueLeads.length === 0) return alert('No unique leads to save!');
+        this.runCleaningEngine();
+    },
 
-            fetch('/api/save-database', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    file_name: this.fileName || 'Imported_Workbook.xlsx',
-                    sheet_count: 1,
-                    leads: uniqueLeads,
-                    skip_duplicates: true
-                })
-            })
+    categorizeCourse(courseStr) {
+        if (!courseStr) return 'Other';
+        const str = String(courseStr).toUpperCase();
+        if (str.includes('DA') || str.includes('DATA') || str.includes('AI') || str.includes('PYTHON') || str.includes('POWER BI') || str.includes('EXCEL') || str.includes('CGAI')) {
+            return 'Data Analyst and Scientist';
+        }
+        if (str.includes('TALLY') || str.includes('GST') || str.includes('ACCOUNT') || str.includes('TAX')) {
+            return 'Accounting and Taxation';
+        }
+        if (str.includes('FULL STACK') || str.includes('WEB') || str.includes('MERN') || str.includes('JAVA') || str.includes('DEVELOPER')) {
+            return 'Full Stack Developer';
+        }
+        return 'Other';
+    },
+
+    parseRealDateAndMonth(val) {
+        if (!val) {
+            const now = new Date();
+            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            return { date: now.toISOString().slice(0,10), month: monthNames[now.getMonth()], year: String(now.getFullYear()), quarter: 'Q1' };
+        }
+        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        let str = String(val).trim();
+        let parts = str.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
+        if (parts) {
+            let day = parseInt(parts[1], 10);
+            let monthNum = parseInt(parts[2], 10);
+            let yearNum = parseInt(parts[3], 10);
+            if (yearNum < 100) yearNum += 2000;
+            let quarter = (monthNum >= 4 && monthNum <= 6) ? 'Q2' : ((monthNum >= 7 && monthNum <= 9) ? 'Q3' : ((monthNum >= 10 && monthNum <= 12) ? 'Q4' : 'Q1'));
+            return { date: `${yearNum}-${String(monthNum).padStart(2,'0')}-${String(day).padStart(2,'0')}`, month: monthNames[monthNum - 1] || 'March', year: String(yearNum), quarter: quarter };
+        }
+        const now = new Date();
+        return { date: str, month: monthNames[now.getMonth()], year: String(now.getFullYear()), quarter: 'Q1' };
+    },
+
+    runCleaningEngine() {
+        if (!this.rawDataset || this.rawDataset.length === 0) return;
+
+        let result = [];
+        let counter = 1;
+        let seenPhones = new Set();
+        let seenEmails = new Set();
+
+        this.rawDataset.forEach(row => {
+            let nameVal = this.mappings.nameCol ? String(row[this.mappings.nameCol] || '').trim() : '';
+            let phoneVal = this.mappings.phoneCol ? String(row[this.mappings.phoneCol] || '').replace(/\D/g, '').slice(-10) : '';
+            let emailVal = this.mappings.emailCol ? String(row[this.mappings.emailCol] || '').trim().toLowerCase() : '';
+            let courseVal = this.mappings.courseCol ? String(row[this.mappings.courseCol] || '').trim() : '';
+            let sourceVal = this.mappings.sourceCol ? String(row[this.mappings.sourceCol] || '').trim() : 'Direct/Organic';
+            let dateVal = this.mappings.dateCol ? row[this.mappings.dateCol] : '';
+
+            // Read EXACT Final Status string from sheet cell
+            let statusVal = '';
+            const rowKeys = Object.keys(row);
+            const exactFinalKey = rowKeys.find(k => String(k).trim().toLowerCase() === 'final status' || String(k).trim().toLowerCase() === 'final_status');
+            
+            if (exactFinalKey && row[exactFinalKey] !== undefined && row[exactFinalKey] !== null) {
+                statusVal = String(row[exactFinalKey]).trim();
+                this.mappings.statusCol = exactFinalKey;
+            } else if (this.mappings.statusCol && row[this.mappings.statusCol] !== undefined && row[this.mappings.statusCol] !== null) {
+                statusVal = String(row[this.mappings.statusCol]).trim();
+            } else {
+                // Auto-fallback: search row for any key containing 'final' or 'status' or 'disposition' or 'remark' (ignoring fresher)
+                const fallbackKey = rowKeys.find(k => {
+                    const lk = k.toLowerCase();
+                    if (lk.includes('fresher') || lk.includes('experience') || lk.includes('marital')) return false;
+                    return lk.includes('final') || lk.includes('status') || lk.includes('disposition') || lk.includes('remark') || lk.includes('stage');
+                });
+                if (fallbackKey && row[fallbackKey] !== undefined && row[fallbackKey] !== null) {
+                    statusVal = String(row[fallbackKey]).trim();
+                    if (!this.mappings.statusCol) this.mappings.statusCol = fallbackKey;
+                }
+            }
+
+            if (!sourceVal) sourceVal = 'Direct/Organic';
+            let categoryVal = this.categorizeCourse(courseVal);
+            let parsedDateObj = this.parseRealDateAndMonth(dateVal);
+
+            // Strict Deduplication by Phone OR Email
+            let isDup = false;
+            if (phoneVal && seenPhones.has(phoneVal)) {
+                isDup = true;
+            } else if (emailVal && seenEmails.has(emailVal)) {
+                isDup = true;
+            }
+
+            if (phoneVal) seenPhones.add(phoneVal);
+            if (emailVal) seenEmails.add(emailVal);
+
+            result.push({
+                _id: counter++,
+                sheet_name: row['_sheet_name'] || 'Sheet1',
+                Date: parsedDateObj.date,
+                Month: parsedDateObj.month,
+                Year: parsedDateObj.year,
+                Quarter: parsedDateObj.quarter,
+                Name: nameVal,
+                Mob: phoneVal,
+                Email: emailVal,
+                Raw_Course: courseVal,
+                Major_Category: categoryVal,
+                Source: sourceVal,
+                Status: statusVal,
+                is_duplicate: isDup
+            });
+        });
+
+        this.processedData = result;
+        this.page = 1;
+        this.saveToDatabaseVault(true);
+        this.renderCharts();
+    },
+
+    handleFileUpload(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        this.fileName = file.name;
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            const wb = XLSX.read(evt.target.result, { type: 'binary' });
+
+            // COMPILE ALL SHEETS IN WORKBOOK
+            let compiled = [];
+            wb.SheetNames.forEach(sheetName => {
+                const ws = wb.Sheets[sheetName];
+                const sheetRows = XLSX.utils.sheet_to_json(ws, { defval: '', raw: false });
+                sheetRows.forEach(r => {
+                    r['_sheet_name'] = sheetName;
+                    compiled.push(r);
+                });
+            });
+
+            this.rawDataset = compiled;
+            if (compiled.length > 0) {
+                let headerSet = new Set();
+                compiled.slice(0, 50).forEach(r => {
+                    Object.keys(r).forEach(k => {
+                        if (k !== '_sheet_name') headerSet.add(k);
+                    });
+                });
+                this.headers = Array.from(headerSet);
+                this.autoMapHeaders();
+            }
+        };
+        reader.readAsBinaryString(file);
+    },
+
+    get totalPages() {
+        return Math.ceil(this.processedData.length / (this.pageSize || 50)) || 1;
+    },
+
+    get paginatedRows() {
+        let start = (this.page - 1) * this.pageSize;
+        return this.processedData.slice(start, start + this.pageSize);
+    },
+
+    openExportModal(target) {
+        this.exportTarget = target;
+        this.exportModalOpen = true;
+    },
+
+    triggerStreamCsvExport() {
+        window.location.href = `/export/csv?status=${encodeURIComponent(this.exportStatusFilter)}&source=${encodeURIComponent(this.exportSourceFilter)}`;
+        this.exportModalOpen = false;
+    },
+
+    triggerDynamicExport() {
+        let dataset = (this.exportTarget === 'vault') ? this.dbLeads : this.processedData;
+
+        if (!dataset || dataset.length === 0) return alert('No data available to export!');
+
+        // Filter dataset based on category, source, status, and exclusion rules
+        let filtered = dataset.filter(r => {
+            const phone  = String(r.Mob || r.mob || '').trim();
+            const email  = String(r.Email || r.email || '').trim();
+            const status = String(r.Status || r.status || '').trim().toLowerCase();
+            const source = String(r.Source || r.source || '').trim();
+            const cat    = String(r.Major_Category || r.major_category || '').trim();
+
+            // Exclude Blank Phone or Email
+            if (this.exportSkipBlankContact && (!phone || !email)) {
+                return false;
+            }
+
+            // Exclude Enrolled Leads
+            if (this.exportIgnoreEnrolled && status.includes('enrolled')) {
+                return false;
+            }
+
+            // Exclude No Need To Call
+            if (this.exportIgnoreNoNeedToCall && (status.includes('no need') || status.includes('no need to call'))) {
+                return false;
+            }
+
+            // Exclude Student Data / Not Interested
+            if (this.exportIgnoreStudentData && (status.includes('student') || status.includes('not interested') || status.includes('student data'))) {
+                return false;
+            }
+
+            // Category Filter
+            if (this.exportCategoryFilter !== 'ALL' && cat !== this.exportCategoryFilter) {
+                return false;
+            }
+
+            // Status Filter
+            if (this.exportStatusFilter !== 'ALL' && !status.includes(this.exportStatusFilter.toLowerCase())) {
+                return false;
+            }
+
+            // Source Filter
+            if (this.exportSourceFilter !== 'ALL' && !source.toLowerCase().includes(this.exportSourceFilter.toLowerCase())) {
+                return false;
+            }
+
+            return true;
+        });
+
+        if (filtered.length === 0) return alert('No records matched your custom export filters!');
+
+        // Build Custom Column Rows
+        const exportRows = filtered.map((r, i) => {
+            let item = { '#': i + 1 };
+            if (this.exportCols.date) item['Date'] = r.Date || r.date || '';
+            if (this.exportCols.year) {
+                item['Month'] = r.Month || r.month || '';
+                item['Year'] = r.Year || r.year || '';
+                item['Quarter'] = r.Quarter || r.quarter || '';
+            }
+            if (this.exportCols.name) item['Student Name'] = r.Name || r.name || '';
+            if (this.exportCols.mob) item['Mobile No'] = r.Mob || r.mob || '';
+            if (this.exportCols.email) item['Email Address'] = r.Email || r.email || '';
+            if (this.exportCols.course) item['Course Name'] = r.Raw_Course || r.raw_course || '';
+            if (this.exportCols.category) item['Major Category'] = r.Major_Category || r.major_category || '';
+            if (this.exportCols.source) item['Lead Source'] = r.Source || r.source || '';
+            if (this.exportCols.status) item['Final Status'] = r.Status || r.status || '';
+
+            return item;
+        });
+
+        const ws = XLSX.utils.json_to_sheet(exportRows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Clean_Leads_Export");
+
+        const filename = `Clean_Leads_Export_${new Date().toISOString().slice(0,10)}.xlsx`;
+        XLSX.writeFile(wb, filename, { bookType: 'xlsx' });
+
+        this.exportModalOpen = false;
+    },
+
+    searchStudentByEmail() {
+        if (!this.studentSearchEmail) return alert('Please enter an email address to search!');
+        fetch(`/api/leads/search-email?email=${encodeURIComponent(this.studentSearchEmail)}`)
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) this.searchedStudentResults = res.leads;
+                else this.searchedStudentResults = [];
+            });
+    },
+
+    deleteSingleStudentSearched(id, email) {
+        if (!confirm(`Are you sure you want to delete the student record for: ${email}?`)) return;
+        fetch(`/api/leads/${id}`, { method: 'DELETE' })
             .then(r => r.json())
             .then(res => {
                 if (res.success) {
-                    alert(res.message);
+                    alert('Student record deleted!');
+                    this.searchStudentByEmail();
                     this.loadDatabaseVault();
-                } else {
-                    alert('Error saving to database: ' + (res.error || 'Unknown error'));
+                    this.loadAnalyticsSummary();
                 }
-            })
-            .catch(() => {
-                const combined = [...uniqueLeads, ...this.dbLeads];
-                this.dbLeads = combined;
-                localStorage.setItem('f1mtech_db_leads', JSON.stringify(combined));
-                alert(`Saved unique leads to Vault database!`);
             });
-        },
+    },
 
-        loadSampleDataset() {
-            const sample = [
-                {"Date": "2024-05-15", "Student Name": "Rahul Sharma", "Mobile No": "9818845002", "Email Address": "rahul.sharma@gmaill.com", "Course Name": "AI", "Lead Source": "Google Ads"},
-                {"Date": "", "Student Name": "Priya Verma", "Mobile No": "9990349899", "Email Address": "priya.v@gmail.com", "Course Name": "DA+CGAI", "Lead Source": "Facebook"},
-                {"Date": "", "Student Name": "Amit Kumar", "Mobile No": "", "Email Address": "amit.k@gmai.com", "Course Name": "MSO+M-DA", "Lead Source": "Instagram"},
-                {"Date": "2024-07-12", "Student Name": "Duplicate Entry", "Mobile No": "9818845002", "Email Address": "rahul.dup@gmail.com", "Course Name": "Python", "Lead Source": "Google Ads"},
-                {"Date": "2024-07-12", "Student Name": "Sneha Gupta", "Mobile No": "8800112233", "Email Address": "", "Course Name": "Digital Marketing", "Lead Source": "Website Direct"},
-                {"Date": "2024-07-25", "Student Name": "Neha Rani", "Mobile No": "9711223344", "Email Address": "neha.rani@gmail.com", "Course Name": "Tally GST", "Lead Source": "JustDial"}
-            ];
+    openEditLeadModal(lead) {
+        this.editLeadForm = {
+            id: lead.id,
+            name: lead.Name || lead.name || '',
+            mob: lead.Mob || lead.mob || '',
+            email: lead.Email || lead.email || '',
+            raw_course: lead.Raw_Course || lead.raw_course || '',
+            source: lead.Source || lead.source || 'Direct/Organic',
+            status: lead.Status || lead.status || '',
+            date: lead.Date || lead.date || ''
+        };
+        this.editLeadModalOpen = true;
+    },
 
-            this.fileName = "Sample_Leads_Dataset.xlsx";
-            this.rawDataset = sample;
-            this.headers = Object.keys(sample[0]);
-            this.autoMapHeaders();
-            this.successMsg = "Loaded Sample Dataset with Lead Source & Deduplication!";
-        },
+    deleteSingleLead(id) {
+        if (!confirm('Are you sure you want to delete this lead?')) return;
+        fetch(`/api/leads/${id}`, { method: 'DELETE' })
+        .then(r => r.json())
+        .then(res => {
+            if (res.success) {
+                this.loadDatabaseVault();
+                this.loadAnalyticsSummary();
+                this.renderCharts();
+            }
+        });
+    },
 
-        handleFileUpload(e) {
-            const file = e.target.files[0];
-            if (!file) return;
+    wipeAllDatabaseLeads() {
+        const password = prompt("🔐 SECURITY CONFIRMATION REQUIRED:\n\nPlease enter the Admin Password to confirm wiping all database records:");
+        if (!password) return;
 
-            this.fileName = file.name;
-            const reader = new FileReader();
-
-            if (file.name.endsWith('.csv')) {
-                Papa.parse(file, {
-                    header: true,
-                    skipEmptyLines: true,
-                    complete: (res) => {
-                        this.rawDataset = res.data;
-                        this.headers = Object.keys(res.data[0] || {});
-                        this.autoMapHeaders();
-                        this.successMsg = `Loaded ${res.data.length} rows from CSV`;
-                    }
-                });
+        fetch('/api/leads/wipe-all', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password: password })
+        })
+        .then(r => r.json())
+        .then(res => {
+            if (res.success) {
+                alert(res.message || '🧹 Database Vault wiped!');
+                this.loadDatabaseVault();
+                this.loadAnalyticsSummary();
+                this.renderCharts();
             } else {
-                reader.onload = (evt) => {
-                    const wb = XLSX.read(evt.target.result, { type: 'binary', cellDates: true, dateNF: 'yyyy-mm-dd' });
-                    const compiled = [];
-
-                    wb.SheetNames.forEach(sheetName => {
-                        const ws = wb.Sheets[sheetName];
-                        const sheetRows = XLSX.utils.sheet_to_json(ws, { defval: '', raw: false });
-                        sheetRows.forEach(row => {
-                            row['_sheet_name'] = sheetName;
-                            compiled.push(row);
-                        });
-                    });
-
-                    this.rawDataset = compiled;
-                    this.headers = Object.keys(compiled[0] || {});
-                    this.autoMapHeaders();
-                    this.successMsg = `Compiled ${compiled.length} rows from all sheets inside Excel file!`;
-                };
-                reader.readAsBinaryString(file);
+                alert(res.error || '🔒 Password Authentication Failed!');
             }
-        },
+        });
+    },
 
-        fetchGoogleSheet() {
-            if (!this.googleUrl) return;
-            const match = this.googleUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
-            if (!match) return alert('Invalid Google Sheet Link');
+    loadAnalyticsSummary() {
+        fetch('/api/analytics-summary')
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) this.analyticsMetrics = res.metrics;
+            });
+    },
 
-            this.loading = true;
-            fetch(`https://docs.google.com/spreadsheets/d/${match[1]}/export?format=csv`)
-                .then(r => r.text())
-                .then(csv => {
-                    Papa.parse(csv, {
-                        header: true,
-                        skipEmptyLines: true,
-                        complete: (res) => {
-                            this.loading = false;
-                            this.rawDataset = res.data;
-                            this.headers = Object.keys(res.data[0] || {});
-                            this.autoMapHeaders();
-                            this.successMsg = `Fetched ${res.data.length} rows from Google Sheet`;
-                        }
-                    });
-                })
-                .catch(() => { this.loading = false; alert('Could not fetch sheet. Ensure link is public.'); });
-        },
-
-        autoMapHeaders() {
-            this.mappings = { nameCol: '', emailCol: '', phoneCol: '', dateCol: '', courseCol: '', sourceCol: '' };
-
-            this.headers.forEach(h => {
-                const cleanH = h.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
-
-                if (!this.mappings.phoneCol && (cleanH.includes('phone') || cleanH.includes('mob') || cleanH.includes('mobile') || cleanH.includes('contact') || cleanH.includes('whatsapp') || cleanH.includes('ph') || cleanH.includes('num') || cleanH.includes('cell'))) {
-                    this.mappings.phoneCol = h;
-                }
-                if (!this.mappings.emailCol && (cleanH.includes('email') || cleanH.includes('mail') || cleanH.includes('gmail') || cleanH.includes('yahoo'))) {
-                    this.mappings.emailCol = h;
-                }
-                if (!this.mappings.nameCol && (cleanH.includes('name') || cleanH.includes('student') || cleanH.includes('candidate') || cleanH.includes('person') || cleanH.includes('user'))) {
-                    this.mappings.nameCol = h;
-                }
-                if (!this.mappings.dateCol && (cleanH.includes('date') || cleanH.includes('dob') || cleanH.includes('reg') || cleanH.includes('created') || cleanH.includes('time'))) {
-                    this.mappings.dateCol = h;
-                }
-                if (!this.mappings.courseCol && (cleanH.includes('course') || cleanH.includes('subject') || cleanH.includes('stream') || cleanH.includes('tech') || cleanH.includes('program') || cleanH.includes('interest'))) {
-                    this.mappings.courseCol = h;
-                }
-                if (!this.mappings.sourceCol && (cleanH.includes('source') || cleanH.includes('platform') || cleanH.includes('channel') || cleanH.includes('campaign') || cleanH.includes('utm') || cleanH.includes('medium') || cleanH.includes('origin') || cleanH.includes('vendor'))) {
-                    this.mappings.sourceCol = h;
+    loadDatabaseVault() {
+        fetch('/api/database-leads')
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) {
+                    this.dbLeads = res.leads;
+                    this.renderCharts();
                 }
             });
+    },
 
-            this.runCleaningEngine();
-        },
-
-        parseRealDateAndMonth(val) {
-            if (val === null || val === undefined || val === '') return { date: '', month: '' };
-            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-
-            if (typeof val === 'number' || (!isNaN(val) && !String(val).includes('-') && !String(val).includes('/') && !String(val).includes('.'))) {
-                const num = parseFloat(val);
-                if (num > 10000 && num < 100000) {
-                    const utc_days  = Math.floor(num - 25569);
-                    const utc_value = utc_days * 86400;
-                    const date_info = new Date(utc_value * 1000);
-                    
-                    const year = date_info.getUTCFullYear();
-                    const month = String(date_info.getUTCMonth() + 1).padStart(2, '0');
-                    const day = String(date_info.getUTCDate()).padStart(2, '0');
-                    
-                    return { date: `${year}-${month}-${day}`, month: monthNames[date_info.getUTCMonth()] };
-                }
+    saveToDatabaseVault(silent = false) {
+        const uniqueLeads = this.processedData.filter(r => !r.is_duplicate);
+        fetch('/api/save-database', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                file_name: this.fileName || 'Imported_Workbook.xlsx',
+                sheet_count: 1,
+                leads: uniqueLeads,
+                skip_duplicates: true
+            })
+        })
+        .then(r => r.json())
+        .then(res => {
+            if (res.success) {
+                if (!silent) alert(res.message);
+                this.loadDatabaseVault();
+                this.loadAnalyticsSummary();
+                this.renderCharts();
             }
+        });
+    },
 
-            let str = String(val).trim();
-            if (!str) return { date: '', month: '' };
+    get filteredDbLeads() {
+        return this.dbLeads.filter(r => {
+            const cat = r.Major_Category || r.major_category;
+            const src = String(r.Source || r.source || '').trim();
+            const yr  = String(r.Year || r.year || '');
+            const qtr = String(r.Quarter || r.quarter || '');
+            const st  = String(r.Status || r.status || '').trim();
 
-            let parts = str.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
-            if (parts) {
-                let day = parseInt(parts[1], 10);
-                let month = parseInt(parts[2], 10) - 1;
-                let year = parseInt(parts[3], 10);
-                if (year < 100) year += 2000;
+            if (this.vaultCategoryFilter !== 'ALL' && cat !== this.vaultCategoryFilter) return false;
+            if (this.vaultSourceFilter !== 'ALL' && !src.toLowerCase().includes(this.vaultSourceFilter.toLowerCase())) return false;
+            if (this.vaultStatusFilter !== 'ALL' && !st.toLowerCase().includes(this.vaultStatusFilter.toLowerCase())) return false;
+            if (this.vaultYearFilter !== 'ALL' && yr !== this.vaultYearFilter) return false;
+            if (this.vaultQuarterFilter !== 'ALL' && qtr !== this.vaultQuarterFilter) return false;
 
-                if (month >= 0 && month < 12 && day >= 1 && day <= 31) {
-                    const formattedDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                    return { date: formattedDate, month: monthNames[month] };
-                }
-            }
+            return true;
+        });
+    }
+};
 
-            return { date: str, month: '' };
-        },
+document.addEventListener('alpine:init', () => {
+    Alpine.data('cleanerApp', () => cleanerDataDefinition);
+});
 
-        shouldExcludeRow(row) {
-            const fullRowText = Object.values(row).join(' ').toLowerCase();
-            if (fullRowText.includes('enrolled')) return true;
-            if (fullRowText.includes('no need to call')) return true;
-            if (fullRowText.includes('student data')) return true;
-            return false;
-        },
-
-        categorizeCourse(courseStr) {
-            if (!courseStr) return 'Other';
-            const upper = String(courseStr).trim().toUpperCase();
-            if (this.COURSE_MAP[upper]) return this.COURSE_MAP[upper];
-
-            if (upper.includes('MDA') || upper.includes('M-DA') || upper.includes('DATA ANALYTIC') || upper.includes('DATA SCIENCE') || upper.includes('POWER BI') || upper.includes('EXCEL') || upper.includes('SQL') || upper.includes('CGAI') || upper === 'AI' || upper.includes('AI ') || upper.includes(' AI')) {
-                return 'Data Analyst and Scientist';
-            }
-            if (upper.includes('TALLY') || upper.includes('GST') || upper.includes('TAX') || upper.includes('ACCOUNT') || upper.includes('ITR') || upper.includes('BUSY') || upper.includes('SAP')) {
-                return 'Accounting and Taxation';
-            }
-            if (upper.includes('DEVELOP') || upper.includes('FULL STACK') || upper.includes('MERN') || upper.includes('MEAN') || upper.includes('JAVA') || upper.includes('PHP') || upper.includes('.NET') || upper.includes('DSA')) {
-                return 'Full Stack Developer';
-            }
-            return 'Other';
-        },
-
-        cleanName(nameStr) {
-            if (!nameStr) return '';
-            let cleaned = String(nameStr).replace(/[^a-zA-Z\s]/g, '').trim().replace(/\s+/g, ' ');
-            if (!cleaned) return '';
-            return cleaned.toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
-        },
-
-        cleanEmail(emailStr) {
-            if (!emailStr) return '';
-            let str = String(emailStr).trim().toLowerCase();
-            if (!str) return '';
-
-            const match = str.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-            if (match) {
-                let e = match[0].replace(/@gmaill?\.com$/i, '@gmail.com').replace(/@gmai\.com$/i, '@gmail.com');
-                return e;
-            }
-            return '';
-        },
-
-        cleanPhone(phoneStr) {
-            if (!phoneStr) return '';
-            let str = String(phoneStr).trim();
-            if (!str) return '';
-
-            let digits = str.replace(/\D/g, '');
-            if (digits.length === 12 && digits.startsWith('91')) digits = digits.slice(2);
-            if (digits.length === 11 && digits.startsWith('0')) digits = digits.slice(1);
-
-            if (digits.length >= 7) {
-                return digits;
-            }
-            return '';
-        },
-
-        isRowEmpty(row) {
-            return Object.values(row).every(v => !v || !String(v).trim());
-        },
-
-        runCleaningEngine() {
-            const result = [];
-            const seenPhones = new Set();
-            let counter = 1;
-
-            let lastValidDate = '';
-            let lastValidMonth = '';
-
-            // DB phone set for strict multi-upload deduplication
-            const dbPhones = new Set();
-            this.dbLeads.forEach(r => {
-                const p = r.Mob || r.mob;
-                if (p) dbPhones.add(p);
-            });
-
-            this.rawDataset.forEach(row => {
-                if (this.isRowEmpty(row)) return;
-                if (this.shouldExcludeRow(row)) return;
-
-                const rawDate   = this.mappings.dateCol ? row[this.mappings.dateCol] : '';
-                const rawName   = this.mappings.nameCol ? row[this.mappings.nameCol] : '';
-                const rawPhone  = this.mappings.phoneCol ? row[this.mappings.phoneCol] : '';
-                const rawEmail  = this.mappings.emailCol ? row[this.mappings.emailCol] : '';
-                const rawCourse = this.mappings.courseCol ? row[this.mappings.courseCol] : '';
-                const rawSource = this.mappings.sourceCol ? row[this.mappings.sourceCol] : '';
-
-                const nameVal   = this.cleanName(rawName);
-                const emailVal  = this.cleanEmail(rawEmail);
-                const phoneVal  = this.cleanPhone(rawPhone);
-                const sourceVal = String(rawSource || '').trim() || 'Direct/Organic';
-                const parsedDateObj = this.parseRealDateAndMonth(rawDate);
-
-                let dateVal = parsedDateObj.date;
-                let monthVal = parsedDateObj.month;
-
-                if (dateVal && dateVal !== '') {
-                    lastValidDate = dateVal;
-                    lastValidMonth = monthVal || lastValidMonth;
-                } else {
-                    dateVal = lastValidDate;
-                    monthVal = lastValidMonth;
-                }
-
-                const courseVal = String(rawCourse || '').trim();
-                const categoryVal = this.categorizeCourse(courseVal);
-
-                let isDup = false;
-                if (phoneVal !== '') {
-                    if (seenPhones.has(phoneVal) || dbPhones.has(phoneVal)) {
-                        isDup = true;
-                    } else {
-                        seenPhones.add(phoneVal);
-                    }
-                }
-
-                result.push({
-                    _id: counter++,
-                    sheet_name: row['_sheet_name'] || 'Sheet1',
-                    Date: dateVal,
-                    Month: monthVal,
-                    Name: nameVal,
-                    Mob: phoneVal,
-                    Email: emailVal,
-                    Raw_Course: courseVal || '',
-                    Major_Category: categoryVal,
-                    Source: sourceVal,
-                    is_duplicate: isDup
-                });
-            });
-
-            this.processedData = result;
-            setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 100);
-        },
-
-        get filteredRows() {
-            return this.processedData.filter(r => {
-                if (this.hideDuplicates && r.is_duplicate) return false;
-                if (this.categoryFilter !== 'ALL' && r.Major_Category !== this.categoryFilter) return false;
-                if (this.sourceFilter !== 'ALL' && r.Source !== this.sourceFilter) return false;
-                return true;
-            });
-        },
-
-        get filteredDbLeads() {
-            return this.dbLeads.filter(r => {
-                const cat = r.Major_Category || r.major_category;
-                const src = r.Source || r.source || 'Direct/Organic';
-
-                if (this.vaultCategoryFilter !== 'ALL' && cat !== this.vaultCategoryFilter) return false;
-                if (this.vaultSourceFilter !== 'ALL' && src !== this.vaultSourceFilter) return false;
-                return true;
-            });
-        },
-
-        get paginatedRows() {
-            const start = (this.page - 1) * this.pageSize;
-            return this.filteredRows.slice(start, start + this.pageSize);
-        }
-    };
+function cleanerApp() {
+    return cleanerDataDefinition;
 }
 </script>
 @endsection

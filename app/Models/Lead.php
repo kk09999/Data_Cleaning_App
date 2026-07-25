@@ -14,12 +14,16 @@ class Lead extends Model
         'sheet_name',
         'date',
         'month',
+        'year',
+        'quarter',
         'name',
         'mob',
         'email',
         'raw_course',
         'major_category',
         'source',
+        'status',
+        'notes',
         'is_duplicate'
     ];
 
