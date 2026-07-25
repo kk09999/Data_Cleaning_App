@@ -32,6 +32,7 @@ return new class extends Migration
             $table->string('email')->nullable();
             $table->string('raw_course')->nullable();
             $table->string('major_category')->default('Other')->index();
+            $table->string('source')->nullable()->default('Direct/Organic')->index(); // Lead source field
             $table->boolean('is_duplicate')->default(false)->index();
             $table->timestamps();
         });

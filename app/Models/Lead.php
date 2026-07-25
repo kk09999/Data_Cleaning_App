@@ -19,6 +19,7 @@ class Lead extends Model
         'email',
         'raw_course',
         'major_category',
+        'source',
         'is_duplicate'
     ];
 

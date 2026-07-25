@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>F1 MTech - AI Data Cleaning & 4-Category Course Categorization Platform</title>
+    <title>F1 MTech - AI Lead Sanitizer, Source Classifier & Database Vault</title>
     <link rel="icon" type="image/webp" href="https://f1mtech.com/public/uploads/202512031446logo_f1.webp">
     
     <!-- Google Fonts Poppins -->
@@ -113,11 +113,11 @@
                 <div class="logo-badge">F1M</div>
                 <div style="display: flex; flex-direction: column;">
                     <span class="logo-title">F1 MTECH DATA CLEANER & VAULT</span>
-                    <span class="logo-subtitle">AI Lead Sanitizer & Dynamic Exporter</span>
+                    <span class="logo-subtitle">Lead Source Classifier & Deduplication Engine</span>
                 </div>
             </div>
             <div style="background: rgba(255,255,255,0.15); padding: 6px 16px; border-radius: 30px; font-size: 13px; display: flex; align-items: center; gap: 6px;">
-                <i data-lucide="sparkles" style="width:16px; color:#ffc107"></i> Intelligent Categorizer Active
+                <i data-lucide="sparkles" style="width:16px; color:#ffc107"></i> Lead Source & Database Engine Active
             </div>
         </div>
     </header>
@@ -146,7 +146,7 @@
                 </div>
 
                 <button class="btn btn-gold" @click="openExportModal(activeTab === 'vault' ? 'vault' : 'current')">
-                    <i data-lucide="sliders" style="width:18px"></i> 🎯 Dynamic Custom Export (Select Columns & Filters)
+                    <i data-lucide="sliders" style="width:18px"></i> 🎯 Dynamic Custom Export (Filters & Source)
                 </button>
             </div>
 
@@ -154,11 +154,11 @@
             <div x-show="activeTab === 'cleaner'">
                 <div style="background: var(--gradient-primary); border-radius: 14px; padding: 25px 35px; color: white; margin-bottom: 25px; box-shadow: 0 10px 30px rgba(8,42,125,0.18); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
                     <div>
-                        <h1 style="font-size: 24px; font-weight: 700; margin-bottom: 6px;">Multi-Sheet Importer & Dynamic Exporter</h1>
+                        <h1 style="font-size: 24px; font-weight: 700; margin-bottom: 6px;">Multi-Sheet Importer, Lead Source & Database Engine</h1>
                         <p style="color: #cbd5e1; font-size: 13.5px;">
-                            • Compiles <strong>all sheets</strong> from uploaded Excel/CSV/Google Sheets.<br>
-                            • Validates and <strong>removes duplicate records by Phone Number</strong>.<br>
-                            • Dynamic Excel Export: Export <strong>only Name & Phone</strong>, or any combination of columns!
+                            • Filter by <strong>Lead Source</strong> (Google, Facebook, Instagram, Website, etc.).<br>
+                            • <strong>Strict Database Deduplication</strong>: Multi-uploading same files rejects duplicate phone numbers automatically!<br>
+                            • Excel Export Rule: <strong>Automatically avoids rows with blank Phone or Email</strong>!
                         </p>
                     </div>
                     <button class="btn btn-gold" @click="loadSampleDataset()">
@@ -205,7 +205,7 @@
                                 <i data-lucide="sparkles" style="width:22px"></i>
                             </div>
                             <h3 style="font-size: 15px; font-weight: 600; margin-bottom: 4px; color: #854d0e;">Try Demo Dataset</h3>
-                            <p style="font-size: 12px; color: #a16207;">Test phone duplicate removal</p>
+                            <p style="font-size: 12px; color: #a16207;">Test Lead Source & Deduplication</p>
                         </div>
                     </div>
 
@@ -219,7 +219,7 @@
                                 <input type="file" accept=".xlsx, .xls, .csv" @change="handleFileUpload($event)" style="display: none;">
                             </label>
                             <p style="font-size: 12px; color: #64748b; margin-top: 10px;">
-                                Auto-detects Mobile, Email, Name, Date & Course columns automatically
+                                Auto-detects Mobile, Email, Name, Date, Course & Lead Source columns
                             </p>
                         </div>
                     </template>
@@ -280,7 +280,7 @@
 
                             <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid var(--border-color);">
                                 <label style="display: block; font-size: 13px; font-weight: 700; color: var(--primary-navy); margin-bottom: 6px;">
-                                    📞 Mob / Phone Column (Validated for Duplicates)
+                                    📞 Mob / Phone Column (Validated)
                                 </label>
                                 <select x-model="mappings.phoneCol" @change="runCleaningEngine()" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 13px; font-weight:700; color:#0d6efd">
                                     <option value="">-- Select Column --</option>
@@ -307,6 +307,18 @@
                                     🎓 Course Column
                                 </label>
                                 <select x-model="mappings.courseCol" @change="runCleaningEngine()" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #fde047; font-size: 13px; font-weight: 600;">
+                                    <option value="">-- Select Column --</option>
+                                    <template x-for="h in headers" :key="h">
+                                        <option :value="h" x-text="h"></option>
+                                    </template>
+                                </select>
+                            </div>
+
+                            <div style="background: #f0fdf4; padding: 15px; border-radius: 8px; border: 1px solid #bbf7d0;">
+                                <label style="display: block; font-size: 13px; font-weight: 700; color: #166534; margin-bottom: 6px;">
+                                    🌐 Source Column (Google, FB, etc.)
+                                </label>
+                                <select x-model="mappings.sourceCol" @change="runCleaningEngine()" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #86efac; font-size: 13px; font-weight: 600;">
                                     <option value="">-- Select Column --</option>
                                     <template x-for="h in headers" :key="h">
                                         <option :value="h" x-text="h"></option>
@@ -340,6 +352,40 @@
                             </div>
                         </div>
 
+                        <!-- Filters Panel: Source & Category Filters -->
+                        <div style="background: white; border-radius: 12px; padding: 18px 22px; border: 1px solid var(--border-color); margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                            <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                                <div>
+                                    <label style="font-size: 12px; font-weight: 700; color: var(--primary-navy); display: block; margin-bottom: 4px;">
+                                        🌐 Filter by Lead Source:
+                                    </label>
+                                    <select x-model="sourceFilter" style="padding: 8px 14px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 13px; font-weight: 600;">
+                                        <option value="ALL">All Sources (Google, FB, Insta, etc.)</option>
+                                        <template x-for="s in uniqueSources" :key="s">
+                                            <option :value="s" x-text="s"></option>
+                                        </template>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label style="font-size: 12px; font-weight: 700; color: var(--primary-navy); display: block; margin-bottom: 4px;">
+                                        🎓 Filter by Category:
+                                    </label>
+                                    <select x-model="categoryFilter" style="padding: 8px 14px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 13px; font-weight: 600;">
+                                        <option value="ALL">All Categories</option>
+                                        <option value="Data Analyst and Scientist">Data Analyst & Scientist</option>
+                                        <option value="Accounting and Taxation">Accounting & Taxation</option>
+                                        <option value="Full Stack Developer">Full Stack Developer</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div style="font-size: 13px; color: #64748b;">
+                                Showing <strong><span x-text="filteredRows.length"></span></strong> matching leads
+                            </div>
+                        </div>
+
                         <!-- Data Grid -->
                         <div class="card-panel">
                             <div class="table-wrapper">
@@ -353,6 +399,7 @@
                                             <th>Mob</th>
                                             <th>Email</th>
                                             <th>Raw Course</th>
+                                            <th>Source</th>
                                             <th>Major Category</th>
                                             <th>Status</th>
                                         </tr>
@@ -367,10 +414,13 @@
                                                 <td><span style="font-family:monospace; font-weight:600" x-text="row.Mob"></span></td>
                                                 <td><span style="font-weight:600" x-text="row.Email"></span></td>
                                                 <td><code x-text="row.Raw_Course"></code></td>
+                                                <td>
+                                                    <span style="background: #e0edff; color: var(--primary-navy); padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 700;" x-text="row.Source"></span>
+                                                </td>
                                                 <td><span class="badge-cat badge-da" x-text="row.Major_Category"></span></td>
                                                 <td>
                                                     <template x-if="row.is_duplicate">
-                                                        <span style="background: #fee2e2; color: #dc2626; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700;">Duplicate Phone</span>
+                                                        <span style="background: #fee2e2; color: #dc2626; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700;">Duplicate</span>
                                                     </template>
                                                     <template x-if="!row.is_duplicate">
                                                         <span style="background: #dcfce7; color: #16a34a; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700;">Unique</span>
@@ -386,13 +436,13 @@
                 </template>
             </div>
 
-            <!-- TAB 2: Saved Database Vault (No Limit) -->
+            <!-- TAB 2: Saved Database Vault -->
             <div x-show="activeTab === 'vault'">
                 <div class="card-panel">
                     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 20px;">
                         <div>
                             <h2 style="font-size: 18px; font-weight: 700; color: var(--primary-navy); margin: 0; display: flex; align-items: center; gap: 8px;">
-                                <i data-lucide="database" style="width:22px"></i> Saved Database Vault (<span x-text="dbLeads.length"></span> Unique Records)
+                                <i data-lucide="database" style="width:22px"></i> Saved Database Vault (<span x-text="filteredDbLeads.length"></span> Unique Records)
                             </h2>
                             <span style="font-size: 12px; color: #64748b;">Full Unrestricted Access | <strong>No Artificial Limits</strong></span>
                         </div>
@@ -401,6 +451,34 @@
                             <button class="btn btn-gold" @click="openExportModal('vault')">
                                 <i data-lucide="sliders" style="width:16px"></i> Custom Dynamic Export Vault (.xlsx)
                             </button>
+                        </div>
+                    </div>
+
+                    <!-- Source & Category Filter inside Vault -->
+                    <div style="background: #f8fafc; border-radius: 10px; padding: 15px 20px; border: 1px solid var(--border-color); margin-bottom: 20px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
+                        <div>
+                            <label style="font-size: 12px; font-weight: 700; color: var(--primary-navy); display: block; margin-bottom: 4px;">
+                                🌐 Filter Vault by Source:
+                            </label>
+                            <select x-model="vaultSourceFilter" style="padding: 8px 14px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 13px; font-weight: 600;">
+                                <option value="ALL">All Sources</option>
+                                <template x-for="s in uniqueVaultSources" :key="s">
+                                    <option :value="s" x-text="s"></option>
+                                </template>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label style="font-size: 12px; font-weight: 700; color: var(--primary-navy); display: block; margin-bottom: 4px;">
+                                🎓 Filter Vault by Category:
+                            </label>
+                            <select x-model="vaultCategoryFilter" style="padding: 8px 14px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 13px; font-weight: 600;">
+                                <option value="ALL">All Categories</option>
+                                <option value="Data Analyst and Scientist">Data Analyst & Scientist</option>
+                                <option value="Accounting and Taxation">Accounting & Taxation</option>
+                                <option value="Full Stack Developer">Full Stack Developer</option>
+                                <option value="Other">Other</option>
+                            </select>
                         </div>
                     </div>
 
@@ -415,18 +493,19 @@
                                     <th>Mob</th>
                                     <th>Email</th>
                                     <th>Raw Course</th>
+                                    <th>Source</th>
                                     <th>Major Category</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <template x-if="dbLeads.length === 0">
+                                <template x-if="filteredDbLeads.length === 0">
                                     <tr>
-                                        <td colSpan="8" style="text-align:center; padding:30px; color:#64748b">
-                                            No saved database leads yet. Import a file and click "Save Unique Leads to Database".
+                                        <td colSpan="9" style="text-align:center; padding:30px; color:#64748b">
+                                            No saved database leads match the selected filters.
                                         </td>
                                     </tr>
                                 </template>
-                                <template x-for="(lead, idx) in dbLeads" :key="idx">
+                                <template x-for="(lead, idx) in filteredDbLeads" :key="idx">
                                     <tr>
                                         <td style="color:#64748b" x-text="idx + 1"></td>
                                         <td style="font-size: 12px;" x-text="lead.Date || lead.date"></td>
@@ -435,6 +514,9 @@
                                         <td style="font-family:monospace; font-weight:600" x-text="lead.Mob || lead.mob"></td>
                                         <td style="font-weight:600" x-text="lead.Email || lead.email"></td>
                                         <td><code x-text="lead.Raw_Course || lead.raw_course"></code></td>
+                                        <td>
+                                            <span style="background: #e0edff; color: var(--primary-navy); padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 700;" x-text="lead.Source || lead.source || 'Direct/Organic'"></span>
+                                        </td>
                                         <td><span class="badge-cat badge-da" x-text="lead.Major_Category || lead.major_category"></span></td>
                                     </tr>
                                 </template>
@@ -450,7 +532,7 @@
                 style="position: fixed; inset: 0; background: rgba(5,25,77,0.7); backdrop-filter: blur(6px); z-index: 999; display: flex; align-items: center; justify-content: center; padding: 20px;"
                 x-transition
             >
-                <div style="background: white; border-radius: 18px; width: 100%; max-width: 580px; padding: 30px; box-shadow: 0 25px 50px rgba(0,0,0,0.3); border: 1px solid var(--border-color);">
+                <div style="background: white; border-radius: 18px; width: 100%; max-width: 600px; padding: 30px; box-shadow: 0 25px 50px rgba(0,0,0,0.3); border: 1px solid var(--border-color);">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px;">
                         <h3 style="font-size: 19px; font-weight: 800; color: var(--primary-navy); display: flex; align-items: center; gap: 8px;">
                             <i data-lucide="sliders" style="width:22px; color:var(--accent-blue)"></i> 🎯 Dynamic Custom Excel Exporter
@@ -458,32 +540,52 @@
                         <button @click="exportModalOpen = false" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #64748b;">&times;</button>
                     </div>
 
-                    <!-- Step A: Choose Source & Category Filter -->
-                    <div style="margin-bottom: 20px;">
-                        <label style="display: block; font-size: 13px; font-weight: 700; color: var(--primary-navy); margin-bottom: 6px;">
-                            1. Select Data Source:
-                        </label>
-                        <select x-model="exportTarget" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 14px; margin-bottom: 15px;">
-                            <option value="current">Current Cleaned Workbook File (<span x-text="processedData.length"></span> rows)</option>
-                            <option value="vault">Database Vault (<span x-text="dbLeads.length"></span> total rows)</option>
-                        </select>
-
-                        <label style="display: block; font-size: 13px; font-weight: 700; color: var(--primary-navy); margin-bottom: 6px;">
-                            2. Filter by Category:
-                        </label>
-                        <select x-model="exportCategoryFilter" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 14px;">
-                            <option value="ALL">All Categories (Complete Dataset)</option>
-                            <option value="Data Analyst and Scientist">Data Analyst & Scientist</option>
-                            <option value="Accounting and Taxation">Accounting & Taxation</option>
-                            <option value="Full Stack Developer">Full Stack Developer</option>
-                            <option value="Other">Other / General Courses</option>
-                        </select>
+                    <div style="background: #fef2f2; border-left: 4px solid #ef4444; color: #991b1b; padding: 10px 14px; border-radius: 6px; font-size: 12px; margin-bottom: 20px;">
+                        ⚠️ <strong>Export Rule Active</strong>: Rows with blank Phone number OR blank Email address are automatically excluded from exports!
                     </div>
 
-                    <!-- Step B: Dynamic Column Selection (Checkboxes) -->
+                    <!-- Selectors -->
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px;">
+                        <div>
+                            <label style="display: block; font-size: 12px; font-weight: 700; color: var(--primary-navy); margin-bottom: 4px;">
+                                1. Select Data Source:
+                            </label>
+                            <select x-model="exportTarget" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 13px;">
+                                <option value="current">Current Cleaned Workbook File (<span x-text="processedData.length"></span> rows)</option>
+                                <option value="vault">Database Vault (<span x-text="dbLeads.length"></span> total rows)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label style="display: block; font-size: 12px; font-weight: 700; color: var(--primary-navy); margin-bottom: 4px;">
+                                2. Filter by Category:
+                            </label>
+                            <select x-model="exportCategoryFilter" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 13px;">
+                                <option value="ALL">All Categories</option>
+                                <option value="Data Analyst and Scientist">Data Analyst & Scientist</option>
+                                <option value="Accounting and Taxation">Accounting & Taxation</option>
+                                <option value="Full Stack Developer">Full Stack Developer</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+
+                        <div style="grid-column: span 2;">
+                            <label style="display: block; font-size: 12px; font-weight: 700; color: var(--primary-navy); margin-bottom: 4px;">
+                                3. Filter by Lead Source:
+                            </label>
+                            <select x-model="exportSourceFilter" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 13px;">
+                                <option value="ALL">All Sources (Google, Facebook, Insta, etc.)</option>
+                                <template x-for="s in uniqueSources" :key="s">
+                                    <option :value="s" x-text="s"></option>
+                                </template>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Column Checkboxes -->
                     <div style="margin-bottom: 25px;">
                         <label style="display: block; font-size: 13px; font-weight: 700; color: var(--primary-navy); margin-bottom: 10px;">
-                            3. Select Columns to Include in Excel Output:
+                            4. Select Columns to Include in Excel Output:
                         </label>
 
                         <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; background: #f8fafc; padding: 16px; border-radius: 12px; border: 1px solid var(--border-color);">
@@ -500,6 +602,10 @@
                                 ✉️ Email Address
                             </label>
                             <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; cursor: pointer;">
+                                <input type="checkbox" x-model="exportCols.source" style="width: 18px; height: 18px;">
+                                🌐 Lead Source
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; cursor: pointer;">
                                 <input type="checkbox" x-model="exportCols.date" style="width: 18px; height: 18px;">
                                 📅 Date
                             </label>
@@ -511,9 +617,9 @@
                                 <input type="checkbox" x-model="exportCols.course" style="width: 18px; height: 18px;">
                                 🎓 Raw Course
                             </label>
-                            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; cursor: pointer; grid-column: span 2;">
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; cursor: pointer;">
                                 <input type="checkbox" x-model="exportCols.category" style="width: 18px; height: 18px;">
-                                🏷️ Major Category (4-Category System)
+                                🏷️ Major Category
                             </label>
                         </div>
                     </div>
@@ -522,7 +628,7 @@
                     <div style="display: flex; gap: 12px; justify-content: flex-end;">
                         <button class="btn btn-outline" @click="exportModalOpen = false">Cancel</button>
                         <button class="btn btn-gold" @click="triggerDynamicExport()">
-                            <i data-lucide="download" style="width:18px"></i> Download Custom Excel (.xlsx) &rarr;
+                            <i data-lucide="download" style="width:18px"></i> Download Filtered Excel (.xlsx) &rarr;
                         </button>
                     </div>
                 </div>
@@ -545,6 +651,9 @@
             loading: false,
             successMsg: '',
             categoryFilter: 'ALL',
+            sourceFilter: 'ALL',
+            vaultCategoryFilter: 'ALL',
+            vaultSourceFilter: 'ALL',
             searchTerm: '',
             hideDuplicates: false,
             page: 1,
@@ -554,10 +663,12 @@
             exportModalOpen: false,
             exportTarget: 'current',
             exportCategoryFilter: 'ALL',
+            exportSourceFilter: 'ALL',
             exportCols: {
                 name: true,
                 mob: true,
                 email: true,
+                source: true,
                 date: true,
                 month: true,
                 course: true,
@@ -569,7 +680,8 @@
                 emailCol: '',
                 phoneCol: '',
                 dateCol: '',
-                courseCol: ''
+                courseCol: '',
+                sourceCol: ''
             },
 
             COURSE_MAP: {
@@ -623,6 +735,23 @@
                 setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 100);
             },
 
+            get uniqueSources() {
+                const sources = new Set();
+                this.processedData.forEach(r => {
+                    if (r.Source) sources.add(r.Source);
+                });
+                return Array.from(sources);
+            },
+
+            get uniqueVaultSources() {
+                const sources = new Set();
+                this.dbLeads.forEach(r => {
+                    const s = r.Source || r.source || 'Direct/Organic';
+                    sources.add(s);
+                });
+                return Array.from(sources);
+            },
+
             openExportModal(target) {
                 this.exportTarget = target;
                 this.exportModalOpen = true;
@@ -640,15 +769,27 @@
                     source = source.filter(r => (r.Major_Category || r.major_category) === this.exportCategoryFilter);
                 }
 
-                if (source.length === 0) {
-                    return alert('No matching records found for the selected category filter!');
+                if (this.exportSourceFilter !== 'ALL') {
+                    source = source.filter(r => (r.Source || r.source) === this.exportSourceFilter);
                 }
 
-                const dynamicRows = source.map(r => {
+                // STRICT RULE: EXCLUDE / AVOID ROWS WHERE PHONE OR EMAIL IS BLANK
+                const validLeads = source.filter(r => {
+                    const phone = String(r.Mob || r.mob || '').trim();
+                    const email = String(r.Email || r.email || '').trim();
+                    return phone !== '' && email !== '';
+                });
+
+                if (validLeads.length === 0) {
+                    return alert('No matching records found that have BOTH a valid Phone Number and valid Email!');
+                }
+
+                const dynamicRows = validLeads.map(r => {
                     const rowObj = {};
                     if (this.exportCols.name) rowObj['Name'] = r.Name || r.name || '';
                     if (this.exportCols.mob) rowObj['Mob'] = r.Mob || r.mob || '';
                     if (this.exportCols.email) rowObj['Email'] = r.Email || r.email || '';
+                    if (this.exportCols.source) rowObj['Source'] = r.Source || r.source || 'Direct/Organic';
                     if (this.exportCols.date) rowObj['Date'] = r.Date || r.date || '';
                     if (this.exportCols.month) rowObj['Month'] = r.Month || r.month || '';
                     if (this.exportCols.course) rowObj['Raw Course'] = r.Raw_Course || r.raw_course || '';
@@ -658,9 +799,9 @@
 
                 const ws = XLSX.utils.json_to_sheet(dynamicRows);
                 const wb = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(wb, ws, "Dynamic_Custom_Export");
+                XLSX.utils.book_append_sheet(wb, ws, "Filtered_Valid_Leads");
 
-                const filename = `Custom_Export_${this.exportCategoryFilter.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.xlsx`;
+                const filename = `Clean_Leads_Export_${new Date().toISOString().slice(0,10)}.xlsx`;
                 XLSX.writeFile(wb, filename, { bookType: 'xlsx' });
 
                 this.exportModalOpen = false;
@@ -671,7 +812,7 @@
                     .then(r => r.json())
                     .then(res => {
                         if (res.success) {
-                            this.dbLeads = res.leads; // UNRESTRICTED FULL ACCESS
+                            this.dbLeads = res.leads;
                         }
                     })
                     .catch(() => {
@@ -709,25 +850,25 @@
                     const combined = [...uniqueLeads, ...this.dbLeads];
                     this.dbLeads = combined;
                     localStorage.setItem('f1mtech_db_leads', JSON.stringify(combined));
-                    alert(`Saved ${uniqueLeads.length} unique leads to Vault database!`);
+                    alert(`Saved unique leads to Vault database!`);
                 });
             },
 
             loadSampleDataset() {
                 const sample = [
-                    {"Date": "2024-05-15", "Student Name": "Rahul Sharma", "Mobile No": "9818845002", "Email Address": "rahul.sharma@gmaill.com", "Course Name": "AI", "Final Status": "Calling"},
-                    {"Date": "", "Student Name": "Priya Verma", "Mobile No": "9990349899", "Email Address": "", "Course Name": "DA+CGAI", "Final Status": "Calling"},
-                    {"Date": "", "Student Name": "Amit Kumar", "Mobile No": "", "Email Address": "amit.k@gmai.com", "Course Name": "MSO+M-DA", "Final Status": "Fresh Lead"},
-                    {"Date": "2024-07-12", "Student Name": "Duplicate Entry", "Mobile No": "9818845002", "Email Address": "rahul.dup@gmail.com", "Course Name": "Python", "Final Status": "Calling"},
-                    {"Date": "2024-07-12", "Student Name": "Sneha Gupta", "Mobile No": "8800112233", "Email Address": "sneha.gupta@outlook.com", "Course Name": "Digital Marketing", "Final Status": "No need to call"},
-                    {"Date": "2024-07-25", "Student Name": "Neha Rani", "Mobile No": "9711223344", "Email Address": "neha.rani@gmail.com", "Course Name": "Tally GST", "Final Status": "Interested"}
+                    {"Date": "2024-05-15", "Student Name": "Rahul Sharma", "Mobile No": "9818845002", "Email Address": "rahul.sharma@gmaill.com", "Course Name": "AI", "Lead Source": "Google Ads"},
+                    {"Date": "", "Student Name": "Priya Verma", "Mobile No": "9990349899", "Email Address": "priya.v@gmail.com", "Course Name": "DA+CGAI", "Lead Source": "Facebook"},
+                    {"Date": "", "Student Name": "Amit Kumar", "Mobile No": "", "Email Address": "amit.k@gmai.com", "Course Name": "MSO+M-DA", "Lead Source": "Instagram"},
+                    {"Date": "2024-07-12", "Student Name": "Duplicate Entry", "Mobile No": "9818845002", "Email Address": "rahul.dup@gmail.com", "Course Name": "Python", "Lead Source": "Google Ads"},
+                    {"Date": "2024-07-12", "Student Name": "Sneha Gupta", "Mobile No": "8800112233", "Email Address": "", "Course Name": "Digital Marketing", "Lead Source": "Website Direct"},
+                    {"Date": "2024-07-25", "Student Name": "Neha Rani", "Mobile No": "9711223344", "Email Address": "neha.rani@gmail.com", "Course Name": "Tally GST", "Lead Source": "JustDial"}
                 ];
 
                 this.fileName = "Sample_Leads_Dataset.xlsx";
                 this.rawDataset = sample;
                 this.headers = Object.keys(sample[0]);
                 this.autoMapHeaders();
-                this.successMsg = "Loaded Sample Dataset with phone number duplicate validation!";
+                this.successMsg = "Loaded Sample Dataset with Lead Source & Deduplication!";
             },
 
             handleFileUpload(e) {
@@ -796,7 +937,7 @@
             },
 
             autoMapHeaders() {
-                this.mappings = { nameCol: '', emailCol: '', phoneCol: '', dateCol: '', courseCol: '' };
+                this.mappings = { nameCol: '', emailCol: '', phoneCol: '', dateCol: '', courseCol: '', sourceCol: '' };
 
                 this.headers.forEach(h => {
                     const cleanH = h.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
@@ -815,6 +956,9 @@
                     }
                     if (!this.mappings.courseCol && (cleanH.includes('course') || cleanH.includes('subject') || cleanH.includes('stream') || cleanH.includes('tech') || cleanH.includes('program') || cleanH.includes('interest'))) {
                         this.mappings.courseCol = h;
+                    }
+                    if (!this.mappings.sourceCol && (cleanH.includes('source') || cleanH.includes('platform') || cleanH.includes('channel') || cleanH.includes('campaign') || cleanH.includes('utm') || cleanH.includes('medium') || cleanH.includes('origin') || cleanH.includes('vendor'))) {
+                        this.mappings.sourceCol = h;
                     }
                 });
 
@@ -931,9 +1075,15 @@
                 let lastValidDate = '';
                 let lastValidMonth = '';
 
+                // DB phone set for strict multi-upload deduplication
+                const dbPhones = new Set();
+                this.dbLeads.forEach(r => {
+                    const p = r.Mob || r.mob;
+                    if (p) dbPhones.add(p);
+                });
+
                 this.rawDataset.forEach(row => {
                     if (this.isRowEmpty(row)) return;
-
                     if (this.shouldExcludeRow(row)) return;
 
                     const rawDate   = this.mappings.dateCol ? row[this.mappings.dateCol] : '';
@@ -941,10 +1091,12 @@
                     const rawPhone  = this.mappings.phoneCol ? row[this.mappings.phoneCol] : '';
                     const rawEmail  = this.mappings.emailCol ? row[this.mappings.emailCol] : '';
                     const rawCourse = this.mappings.courseCol ? row[this.mappings.courseCol] : '';
+                    const rawSource = this.mappings.sourceCol ? row[this.mappings.sourceCol] : '';
 
-                    const nameVal  = this.cleanName(rawName);
-                    const emailVal = this.cleanEmail(rawEmail);
-                    const phoneVal = this.cleanPhone(rawPhone);
+                    const nameVal   = this.cleanName(rawName);
+                    const emailVal  = this.cleanEmail(rawEmail);
+                    const phoneVal  = this.cleanPhone(rawPhone);
+                    const sourceVal = String(rawSource || '').trim() || 'Direct/Organic';
                     const parsedDateObj = this.parseRealDateAndMonth(rawDate);
 
                     let dateVal = parsedDateObj.date;
@@ -963,7 +1115,7 @@
 
                     let isDup = false;
                     if (phoneVal !== '') {
-                        if (seenPhones.has(phoneVal)) {
+                        if (seenPhones.has(phoneVal) || dbPhones.has(phoneVal)) {
                             isDup = true;
                         } else {
                             seenPhones.add(phoneVal);
@@ -980,6 +1132,7 @@
                         Email: emailVal,
                         Raw_Course: courseVal || '',
                         Major_Category: categoryVal,
+                        Source: sourceVal,
                         is_duplicate: isDup
                     });
                 });
@@ -992,6 +1145,18 @@
                 return this.processedData.filter(r => {
                     if (this.hideDuplicates && r.is_duplicate) return false;
                     if (this.categoryFilter !== 'ALL' && r.Major_Category !== this.categoryFilter) return false;
+                    if (this.sourceFilter !== 'ALL' && r.Source !== this.sourceFilter) return false;
+                    return true;
+                });
+            },
+
+            get filteredDbLeads() {
+                return this.dbLeads.filter(r => {
+                    const cat = r.Major_Category || r.major_category;
+                    const src = r.Source || r.source || 'Direct/Organic';
+
+                    if (this.vaultCategoryFilter !== 'ALL' && cat !== this.vaultCategoryFilter) return false;
+                    if (this.vaultSourceFilter !== 'ALL' && src !== this.vaultSourceFilter) return false;
                     return true;
                 });
             },
