@@ -258,12 +258,12 @@
                                     <th>Major Category</th>
                                     <th>Source</th>
                                     <th>Final Status</th>
-                                    <th>Deduplication</th>
+                                    <th>Validation Status</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <template x-for="(row, idx) in paginatedRows" :key="idx">
-                                    <tr :class="{'duplicate-row': row.is_duplicate}">
+                                    <tr :class="{'duplicate-row': row.is_duplicate || row.is_invalid_contact}">
                                         <td style="color:#64748b" x-text="((page - 1) * pageSize) + idx + 1"></td>
                                         <td style="font-size: 12px;" x-text="row.Date"></td>
                                         <td><strong style="color:var(--primary-navy)" x-text="row.Month"></strong></td>
@@ -283,11 +283,14 @@
                                             </span>
                                         </td>
                                         <td>
-                                            <template x-if="row.is_duplicate">
-                                                <span style="background: #fee2e2; color: #dc2626; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700;">Dup (Phone/Email)</span>
+                                            <template x-if="row.is_invalid_contact">
+                                                <span style="background: #fee2e2; color: #dc2626; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700;" x-text="row.invalid_reason"></span>
                                             </template>
-                                            <template x-if="!row.is_duplicate">
-                                                <span style="background: #dcfce7; color: #16a34a; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700;">Unique</span>
+                                            <template x-if="!row.is_invalid_contact && row.is_duplicate">
+                                                <span style="background: #fef3c7; color: #d97706; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700;">Dup (Phone/Email)</span>
+                                            </template>
+                                            <template x-if="!row.is_invalid_contact && !row.is_duplicate">
+                                                <span style="background: #dcfce7; color: #16a34a; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700;">Valid Authentic Lead</span>
                                             </template>
                                         </td>
                                     </tr>
@@ -1178,6 +1181,36 @@ const cleanerDataDefinition = {
         return { date: str, month: monthNames[now.getMonth()], year: String(now.getFullYear()), quarter: 'Q1' };
     },
 
+    validatePhoneJS(rawPhone) {
+        if (!rawPhone || !String(rawPhone).trim()) return { isValid: false, reason: 'Blank Phone', digits: '' };
+        let digits = String(rawPhone).replace(/\D/g, '');
+        if (digits.length === 12 && digits.startsWith('91')) digits = digits.slice(2);
+        else if (digits.length === 11 && digits.startsWith('0')) digits = digits.slice(1);
+
+        if (digits.length !== 10) return { isValid: false, reason: 'Invalid Phone (Must be 10 digits)', digits: digits };
+        if (!/^[5-9]\d{9}$/.test(digits)) return { isValid: false, reason: 'Invalid Phone Prefix', digits: digits };
+
+        const dummy = ['0000000000','1111111111','2222222222','3333333333','4444444444','5555555555','6666666666','7777777777','8888888888','9999999999','1234567890','0123456789','9876543210','1234512345'];
+        if (dummy.includes(digits)) return { isValid: false, reason: 'Dummy Phone', digits: digits };
+
+        return { isValid: true, reason: '', digits: digits };
+    },
+
+    validateEmailJS(rawEmail) {
+        if (!rawEmail || !String(rawEmail).trim()) return { isValid: false, reason: 'Blank Email', email: '' };
+        let email = String(rawEmail).trim().toLowerCase().replace(/\s+/g, '');
+        email = email.replace(/@gmaill?\.com$/i, '@gmail.com').replace(/@gmai\.com$/i, '@gmail.com');
+
+        const dummy = ['test@test.com','noemail@gmail.com','na@gmail.com','none@gmail.com','null@gmail.com','abc@xyz.com','no@email.com','email@gmail.com','xyz@gmail.com','dummy@gmail.com','sample@gmail.com'];
+        if (dummy.includes(email)) return { isValid: false, reason: 'Dummy Email', email: email };
+
+        if (/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(email)) {
+            return { isValid: true, reason: '', email: email };
+        }
+
+        return { isValid: false, reason: 'Invalid Email Syntax', email: email };
+    },
+
     runCleaningEngine() {
         if (!this.rawDataset || this.rawDataset.length === 0) return;
 
@@ -1188,8 +1221,29 @@ const cleanerDataDefinition = {
 
         this.rawDataset.forEach(row => {
             let nameVal = this.mappings.nameCol ? String(row[this.mappings.nameCol] || '').trim() : '';
-            let phoneVal = this.mappings.phoneCol ? String(row[this.mappings.phoneCol] || '').replace(/\D/g, '').slice(-10) : '';
-            let emailVal = this.mappings.emailCol ? String(row[this.mappings.emailCol] || '').trim().toLowerCase() : '';
+            let rawPhoneVal = this.mappings.phoneCol ? row[this.mappings.phoneCol] : '';
+            let rawEmailVal = this.mappings.emailCol ? row[this.mappings.emailCol] : '';
+
+            let phoneRes = this.validatePhoneJS(rawPhoneVal);
+            let emailRes = this.validateEmailJS(rawEmailVal);
+
+            let phoneVal = phoneRes.isValid ? phoneRes.digits : '';
+            let emailVal = emailRes.isValid ? emailRes.email : '';
+
+            // Allow import if AT LEAST ONE contact method is valid (Phone OR Email)!
+            // Only flag as invalid/skip if BOTH Phone AND Email are missing/invalid!
+            let isInvalidContact = !phoneRes.isValid && !emailRes.isValid;
+            let invalidReason = '';
+            if (isInvalidContact) {
+                invalidReason = 'Both Phone & Email Missing/Invalid';
+            } else if (phoneRes.isValid && emailRes.isValid) {
+                invalidReason = 'Valid Authentic Lead';
+            } else if (phoneRes.isValid) {
+                invalidReason = 'Valid Phone (Email Blank)';
+            } else if (emailRes.isValid) {
+                invalidReason = 'Valid Email (Phone Blank)';
+            }
+
             let courseVal = this.mappings.courseCol ? String(row[this.mappings.courseCol] || '').trim() : '';
             let sourceVal = this.mappings.sourceCol ? String(row[this.mappings.sourceCol] || '').trim() : 'Direct/Organic';
             let dateVal = this.mappings.dateCol ? row[this.mappings.dateCol] : '';
@@ -1246,7 +1300,9 @@ const cleanerDataDefinition = {
                 Major_Category: categoryVal,
                 Source: sourceVal,
                 Status: statusVal,
-                is_duplicate: isDup
+                is_duplicate: isDup,
+                is_invalid_contact: isInvalidContact,
+                invalid_reason: invalidReason
             });
         });
 
@@ -1254,6 +1310,29 @@ const cleanerDataDefinition = {
         this.page = 1;
         this.saveToDatabaseVault(true);
         this.renderCharts();
+    },
+
+    saveToDatabaseVault(silent = false) {
+        const cleanAuthenticLeads = this.processedData.filter(r => !r.is_duplicate && !r.is_invalid_contact);
+        fetch('/api/save-database', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                file_name: this.fileName || 'Imported_Workbook.xlsx',
+                sheet_count: 1,
+                leads: cleanAuthenticLeads,
+                skip_duplicates: true
+            })
+        })
+        .then(r => r.json())
+        .then(res => {
+            if (res.success) {
+                if (!silent) alert(res.message);
+                this.loadDatabaseVault();
+                this.loadAnalyticsSummary();
+                this.renderCharts();
+            }
+        });
     },
 
     handleFileUpload(e) {
@@ -1323,7 +1402,23 @@ const cleanerDataDefinition = {
             const source = String(r.Source || r.source || '').trim();
             const cat    = String(r.Major_Category || r.major_category || '').trim();
 
-            // Exclude Blank Phone or Email
+            // Rule 1: If BOTH Phone and Email are missing/blank/unauthorized, ignore row completely!
+            if (!phone && !email) {
+                return false;
+            }
+
+            // Rule 2: Single Column Export Strictness:
+            // If exporting Phone ONLY (without Email), ignore rows missing Phone
+            if (this.exportCols.mob && !this.exportCols.email && !phone) {
+                return false;
+            }
+
+            // If exporting Email ONLY (without Phone), ignore rows missing Email
+            if (this.exportCols.email && !this.exportCols.mob && !email) {
+                return false;
+            }
+
+            // Exclude Blank Phone or Email if explicit checkbox is ticked
             if (this.exportSkipBlankContact && (!phone || !email)) {
                 return false;
             }

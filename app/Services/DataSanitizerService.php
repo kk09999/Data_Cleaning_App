@@ -26,51 +26,82 @@ class DataSanitizerService
     }
 
     /**
-     * Clean Email: Convert to lowercase, strip invalid spacing, fix common domain typos.
-     * Returns empty string '' if missing/invalid.
+     * Clean & Validate Email: Convert to lowercase, fix domain typos, check syntax & dummy values.
      */
     public function cleanEmail(?string $rawEmail): array
     {
         if (empty($rawEmail) || !trim((string)$rawEmail)) {
-            return ['value' => '', 'is_valid' => false];
+            return ['value' => '', 'is_valid' => false, 'reason' => 'Blank Email'];
         }
 
         $email = strtolower(trim((string)$rawEmail));
         $email = str_replace(' ', '', $email);
 
+        // Fix common domain typos
         $email = preg_replace('/@gmaill?\.com$/i', '@gmail.com', $email);
         $email = preg_replace('/@gmai\.com$/i', '@gmail.com', $email);
+        $email = preg_replace('/@hotmaill?\.com$/i', '@hotmail.com', $email);
+        $email = preg_replace('/@yahooo?\.com$/i', '@yahoo.com', $email);
 
-        if (preg_match('/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i', $email, $matches)) {
-            return ['value' => $matches[0], 'is_valid' => true];
+        // Reject dummy or unauthorized email strings
+        $dummyEmails = [
+            'test@test.com', 'noemail@gmail.com', 'na@gmail.com', 'none@gmail.com',
+            'null@gmail.com', 'abc@xyz.com', 'no@email.com', 'email@gmail.com',
+            'xyz@gmail.com', 'dummy@gmail.com', 'sample@gmail.com', 'user@gmail.com'
+        ];
+
+        if (in_array($email, $dummyEmails, true)) {
+            return ['value' => $email, 'is_valid' => false, 'reason' => 'Dummy/Unauthorized Email'];
         }
 
-        return ['value' => '', 'is_valid' => false];
+        if (preg_match('/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i', $email)) {
+            return ['value' => $email, 'is_valid' => true, 'reason' => ''];
+        }
+
+        return ['value' => $email, 'is_valid' => false, 'reason' => 'Invalid Email Syntax'];
     }
 
     /**
-     * Clean Phone/Mob: Extract digits WITHOUT + or +91 prefix.
-     * Returns empty string '' if missing/invalid.
+     * Clean & Validate Phone/Mob: Must be a valid 10-digit mobile number.
+     * Rejects short numbers, repetitive dummy digits (0000000000, 1234567890), etc.
      */
     public function cleanPhone(?string $rawPhone): array
     {
         if (empty($rawPhone) || !trim((string)$rawPhone)) {
-            return ['value' => '', 'is_valid' => false];
+            return ['value' => '', 'is_valid' => false, 'reason' => 'Blank Phone'];
         }
 
         $digits = preg_replace('/\D/', '', (string)$rawPhone);
 
+        // Normalize country prefix
         if (strlen($digits) === 12 && str_starts_with($digits, '91')) {
             $digits = substr($digits, 2);
         } elseif (strlen($digits) === 11 && str_starts_with($digits, '0')) {
             $digits = substr($digits, 1);
         }
 
-        if (strlen($digits) >= 7) {
-            return ['value' => $digits, 'is_valid' => true];
+        // Must be exactly 10 digits
+        if (strlen($digits) !== 10) {
+            return ['value' => $digits, 'is_valid' => false, 'reason' => 'Phone must be 10 digits'];
         }
 
-        return ['value' => '', 'is_valid' => false];
+        // Must start with a valid mobile prefix (5, 6, 7, 8, 9)
+        if (!preg_match('/^[5-9]\d{9}$/', $digits)) {
+            return ['value' => $digits, 'is_valid' => false, 'reason' => 'Invalid Phone Prefix'];
+        }
+
+        // Reject dummy repetitive phone numbers
+        $dummyPhones = [
+            '0000000000', '1111111111', '2222222222', '3333333333', '4444444444',
+            '5555555555', '6666666666', '7777777777', '8888888888', '9999999999',
+            '1234567890', '0123456789', '9876543210', '1234512345'
+        ];
+
+        if (in_array($digits, $dummyPhones, true)) {
+            return ['value' => $digits, 'is_valid' => false, 'reason' => 'Dummy/Unauthorized Phone'];
+        }
+
+        return ['value' => $digits, 'is_valid' => true, 'reason' => ''];
     }
 
     /**

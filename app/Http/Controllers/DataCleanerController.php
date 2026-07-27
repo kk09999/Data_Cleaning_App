@@ -154,6 +154,7 @@ class DataCleanerController extends Controller
 
         $insertedCount  = 0;
         $duplicateCount = 0;
+        $invalidCount   = 0;
 
         $batch = ImportBatch::create([
             'file_name'       => $fileName,
@@ -165,8 +166,26 @@ class DataCleanerController extends Controller
 
         foreach ($leadsData as $lead) {
             $isDup = $lead['is_duplicate'] ?? false;
-            $phone = $lead['Mob'] ?? ($lead['mob'] ?? '');
-            $email = $lead['Email'] ?? ($lead['email'] ?? '');
+            $rawPhone = $lead['Mob'] ?? ($lead['mob'] ?? '');
+            $rawEmail = $lead['Email'] ?? ($lead['email'] ?? '');
+
+            // Strict Validation Check
+            $phoneRes = $this->sanitizer->cleanPhone($rawPhone);
+            $emailRes = $this->sanitizer->cleanEmail($rawEmail);
+
+            $phone = $phoneRes['value'];
+            $email = $emailRes['value'];
+
+            // Reject ONLY IF BOTH phone and email are invalid/blank!
+            // If AT LEAST ONE contact method is valid (Phone OR Email), allow import!
+            if (!$phoneRes['is_valid'] && !$emailRes['is_valid']) {
+                $invalidCount++;
+                continue;
+            }
+
+            // Set clean values (or empty string if invalid)
+            $phone = $phoneRes['is_valid'] ? $phoneRes['value'] : '';
+            $email = $emailRes['is_valid'] ? $emailRes['value'] : '';
 
             // Strict Database Deduplication: Reject any Phone OR Email already in DB
             $existsInDb = false;
@@ -215,10 +234,11 @@ class DataCleanerController extends Controller
 
         return response()->json([
             'success'         => true,
-            'message'         => "Successfully saved {$insertedCount} new leads to Database! ({$duplicateCount} duplicates skipped).",
+            'message'         => "Successfully saved {$insertedCount} clean authentic lead(s) to MySQL Vault! ({$duplicateCount} duplicates & {$invalidCount} invalid/blank skipped)",
             'batch_id'        => $batch->id,
             'saved_count'     => $insertedCount,
-            'duplicate_count' => $duplicateCount
+            'duplicate_count' => $duplicateCount,
+            'invalid_count'   => $invalidCount
         ]);
     }
 
