@@ -1259,7 +1259,6 @@ const cleanerDataDefinition = {
                 invalidReason = 'Valid Email (Phone Blank)';
             }
 
-            let courseVal = this.mappings.courseCol ? String(row[this.mappings.courseCol] || '').trim() : '';
             let sourceVal = this.mappings.sourceCol ? String(row[this.mappings.sourceCol] || '').trim() : 'Direct/Organic';
             let dateVal = this.mappings.dateCol ? row[this.mappings.dateCol] : '';
 
