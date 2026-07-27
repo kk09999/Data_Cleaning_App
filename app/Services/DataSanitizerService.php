@@ -62,46 +62,34 @@ class DataSanitizerService
     }
 
     /**
-     * Clean & Validate Phone/Mob: Must be a valid 10-digit mobile number.
-     * Rejects short numbers, repetitive dummy digits (0000000000, 1234567890), etc.
+     * Clean & Validate Phone/Mob: Extract last 10 digits from right side if >= 10 digits.
+     * Supports Nepal and international numbers (7+ digits).
      */
     public function cleanPhone(?string $rawPhone): array
     {
-        if (empty($rawPhone) || !trim((string)$rawPhone)) {
+        if (empty($rawPhone) || !trim((string)$rawPhone) || strtoupper(trim((string)$rawPhone)) === 'N/A') {
             return ['value' => '', 'is_valid' => false, 'reason' => 'Blank Phone'];
         }
 
-        $digits = preg_replace('/\D/', '', (string)$rawPhone);
+        $str = trim((string)$rawPhone);
+        $digits = preg_replace('/\D/', '', $str);
 
-        // Normalize country prefix
-        if (strlen($digits) === 12 && str_starts_with($digits, '91')) {
-            $digits = substr($digits, 2);
-        } elseif (strlen($digits) === 11 && str_starts_with($digits, '0')) {
-            $digits = substr($digits, 1);
+        if (empty($digits)) {
+            return ['value' => '', 'is_valid' => false, 'reason' => 'Blank Phone'];
         }
 
-        // Must be exactly 10 digits
-        if (strlen($digits) !== 10) {
-            return ['value' => $digits, 'is_valid' => false, 'reason' => 'Phone must be 10 digits'];
+        // Extract 10 digits from right side if >= 10 digits
+        if (strlen($digits) >= 10) {
+            $cleaned = substr($digits, -10);
+            return ['value' => $cleaned, 'is_valid' => true, 'reason' => ''];
         }
 
-        // Must start with a valid mobile prefix (5, 6, 7, 8, 9)
-        if (!preg_match('/^[5-9]\d{9}$/', $digits)) {
-            return ['value' => $digits, 'is_valid' => false, 'reason' => 'Invalid Phone Prefix'];
+        // Support Nepal & International numbers (7 to 9 digits)
+        if (strlen($digits) >= 7) {
+            return ['value' => $digits, 'is_valid' => true, 'reason' => ''];
         }
 
-        // Reject dummy repetitive phone numbers
-        $dummyPhones = [
-            '0000000000', '1111111111', '2222222222', '3333333333', '4444444444',
-            '5555555555', '6666666666', '7777777777', '8888888888', '9999999999',
-            '1234567890', '0123456789', '9876543210', '1234512345'
-        ];
-
-        if (in_array($digits, $dummyPhones, true)) {
-            return ['value' => $digits, 'is_valid' => false, 'reason' => 'Dummy/Unauthorized Phone'];
-        }
-
-        return ['value' => $digits, 'is_valid' => true, 'reason' => ''];
+        return ['value' => $digits, 'is_valid' => false, 'reason' => 'Short Phone Number'];
     }
 
     /**

@@ -1182,18 +1182,26 @@ const cleanerDataDefinition = {
     },
 
     validatePhoneJS(rawPhone) {
-        if (!rawPhone || !String(rawPhone).trim()) return { isValid: false, reason: 'Blank Phone', digits: '' };
-        let digits = String(rawPhone).replace(/\D/g, '');
-        if (digits.length === 12 && digits.startsWith('91')) digits = digits.slice(2);
-        else if (digits.length === 11 && digits.startsWith('0')) digits = digits.slice(1);
+        if (!rawPhone || !String(rawPhone).trim() || String(rawPhone).trim().toUpperCase() === 'N/A') {
+            return { isValid: false, reason: 'Blank Phone', digits: '' };
+        }
+        let str = String(rawPhone).trim();
+        let digits = str.replace(/\D/g, '');
 
-        if (digits.length !== 10) return { isValid: false, reason: 'Invalid Phone (Must be 10 digits)', digits: digits };
-        if (!/^[5-9]\d{9}$/.test(digits)) return { isValid: false, reason: 'Invalid Phone Prefix', digits: digits };
+        if (!digits) return { isValid: false, reason: 'Blank Phone', digits: '' };
 
-        const dummy = ['0000000000','1111111111','2222222222','3333333333','4444444444','5555555555','6666666666','7777777777','8888888888','9999999999','1234567890','0123456789','9876543210','1234512345'];
-        if (dummy.includes(digits)) return { isValid: false, reason: 'Dummy Phone', digits: digits };
+        // Extract 10 digits from right side if length >= 10
+        if (digits.length >= 10) {
+            let rightmost10 = digits.slice(-10);
+            return { isValid: true, reason: '', digits: rightmost10 };
+        }
 
-        return { isValid: true, reason: '', digits: digits };
+        // Support Nepal & International numbers (7 to 9 digits)
+        if (digits.length >= 7) {
+            return { isValid: true, reason: '', digits: digits };
+        }
+
+        return { isValid: false, reason: 'Short Phone Number', digits: digits };
     },
 
     validateEmailJS(rawEmail) {
@@ -1223,6 +1231,13 @@ const cleanerDataDefinition = {
             let nameVal = this.mappings.nameCol ? String(row[this.mappings.nameCol] || '').trim() : '';
             let rawPhoneVal = this.mappings.phoneCol ? row[this.mappings.phoneCol] : '';
             let rawEmailVal = this.mappings.emailCol ? row[this.mappings.emailCol] : '';
+            let courseVal = this.mappings.courseCol ? String(row[this.mappings.courseCol] || '').trim() : '';
+
+            // Skip completely empty Excel placeholder rows (where Name, Phone, Email & Course are ALL N/A or Blank)
+            const isBlank = (v) => !v || v.toUpperCase() === 'N/A' || v.toUpperCase() === 'NULL' || v.toUpperCase() === 'UNDEFINED';
+            if (isBlank(nameVal) && isBlank(String(rawPhoneVal || '').trim()) && isBlank(String(rawEmailVal || '').trim()) && isBlank(courseVal)) {
+                return;
+            }
 
             let phoneRes = this.validatePhoneJS(rawPhoneVal);
             let emailRes = this.validateEmailJS(rawEmailVal);
