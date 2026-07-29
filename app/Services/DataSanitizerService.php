@@ -30,34 +30,92 @@ class DataSanitizerService
     }
 
     /**
-     * Clean Name: Preserve all Unicode letters (Æ, ā, ñ, é), dots (C. S.), hyphens, apostrophes.
-     * Replaces underscores with spaces, defaults blank names to "Student", and formats in Title Case.
+     * Extract name from email username (part before @) stripping digits/symbols and formatting in Title Case.
      */
-    public function cleanName(?string $rawName): string
+    public function extractNameFromEmail(?string $email): string
     {
-        if (empty($rawName) || !trim((string)$rawName)) {
-            return 'Student';
+        if (empty($email) || !str_contains($email, '@')) {
+            return '';
         }
 
-        $str = trim((string)$rawName);
-        $str = str_replace('_', ' ', $str);
+        $parts = explode('@', trim($email));
+        $username = $parts[0];
 
-        // Transliterate Devanagari / Hindi Unicode characters if present
-        if (preg_match('/[\x{0900}-\x{097F}]/u', $str)) {
-            $str = $this->transliterateHindi($str);
+        $cleanUser = str_replace(['.', '_', '-'], ' ', $username);
+        $cleanUser = preg_replace('/[^\p{L}\s]/u', '', $cleanUser);
+        $cleanUser = trim(preg_replace('/\s+/', ' ', $cleanUser));
+
+        if (empty($cleanUser) || strlen($cleanUser) < 2) {
+            return '';
         }
 
-        // Keep all Unicode letters (\p{L}), spaces, dots, hyphens, and single quotes
-        // Remove numbers, symbols, emojis (e.g. ⭐⭐⭐)
-        $cleaned = preg_replace('/[^\p{L}\s\.\-\']/u', '', $str);
-        $cleaned = trim(preg_replace('/\s+/', ' ', $cleaned));
+        return mb_convert_case($cleanUser, MB_CASE_TITLE, 'UTF-8');
+    }
 
-        if (empty($cleaned) || strlen($cleaned) < 2) {
-            return 'Student';
+    /**
+     * Generate realistic unique Indian full name for blank/Student placeholder names.
+     */
+    public function generateUniqueIndianName(int $seed = 1): string
+    {
+        $firstNames = [
+            'Amit', 'Pooja', 'Rahul', 'Neha', 'Vikas', 'Priya', 'Anand', 'Sunita', 'Rajesh', 'Deepak',
+            'Sanjay', 'Kavita', 'Rohan', 'Anjali', 'Manish', 'Divya', 'Suresh', 'Meena', 'Alok', 'Swati',
+            'Gaurav', 'Ritu', 'Nitin', 'Shweta', 'Ashish', 'Komal', 'Saurabh', 'Kiran', 'Tarun', 'Poonam',
+            'Abhishek', 'Monika', 'Dinesh', 'Priti', 'Pawan', 'Reena', 'Vivek', 'Seema', 'Manoj', 'Aarti',
+            'Ravi', 'Jyoti', 'Sunil', 'Rekha', 'Pankaj', 'Suman', 'Ajay', 'Pinki', 'Naveen', 'Sarita',
+            'Vinod', 'Anju', 'Kapil', 'Vandana', 'Satish', 'Nisha', 'Mukesh', 'Archana', 'Vijay', 'Bhavna'
+        ];
+
+        $lastNames = [
+            'Kumar', 'Sharma', 'Verma', 'Gupta', 'Singh', 'Patel', 'Mishra', 'Yadav', 'Mehta', 'Jha',
+            'Pandey', 'Shukla', 'Chaudhary', 'Deshmukh', 'Kulkarni', 'Reddy', 'Nair', 'Sengupta', 'Banerjee',
+            'Rathore', 'Joshi', 'Aggarwal', 'Tripathi', 'Thakur', 'Giri', 'Saxena', 'Tiwari', 'Dubey', 'Rawat', 'Srivastava'
+        ];
+
+        $fn = $firstNames[$seed % count($firstNames)];
+        $ln = $lastNames[($seed * 7 + 3) % count($lastNames)];
+
+        return $fn . ' ' . $ln;
+    }
+
+    /**
+     * Clean Name: Preserve Unicode letters, accents, dots, hyphens.
+     * Priority 1: Valid Name
+     * Priority 2: Extract text from email username if name is blank/placeholder
+     * Priority 3: Fallback to unique Indian name generator
+     */
+    public function cleanName(?string $rawName, ?string $rawEmail = null, int $seed = 1): string
+    {
+        $invalidPlaceholders = ['student', 'n/a', 'na', 'null', 'none', 'undefined', 'blank', 'no name'];
+        $rawTrim = strtolower(trim((string)$rawName));
+        $hasName = !empty($rawName) && trim((string)$rawName) && !in_array($rawTrim, $invalidPlaceholders, true);
+        
+        if ($hasName) {
+            $str = trim((string)$rawName);
+            $str = str_replace('_', ' ', $str);
+
+            if (preg_match('/[\x{0900}-\x{097F}]/u', $str)) {
+                $str = $this->transliterateHindi($str);
+            }
+
+            $cleaned = preg_replace('/[^\p{L}\s\.\-\']/u', '', $str);
+            $cleaned = trim(preg_replace('/\s+/', ' ', $cleaned));
+
+            if (!empty($cleaned) && strlen($cleaned) >= 2 && !in_array(strtolower($cleaned), $invalidPlaceholders, true)) {
+                return mb_convert_case($cleaned, MB_CASE_TITLE, 'UTF-8');
+            }
         }
 
-        // Title Case formatting
-        return mb_convert_case($cleaned, MB_CASE_TITLE, 'UTF-8');
+        // Priority 2: Extract text from email username if available
+        if (!empty($rawEmail)) {
+            $emailExtracted = $this->extractNameFromEmail($rawEmail);
+            if (!empty($emailExtracted)) {
+                return $emailExtracted;
+            }
+        }
+
+        // Priority 3: Fallback to unique Indian name generator
+        return $this->generateUniqueIndianName($seed);
     }
 
     /**

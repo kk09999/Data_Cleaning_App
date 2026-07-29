@@ -922,10 +922,10 @@ const cleanerDataDefinition = {
     exportCategoryFilter: 'ALL',
     exportStatusFilter: 'ALL',
     exportSourceFilter: 'ALL',
-    exportIgnoreEnrolled: true,
-    exportIgnoreNoNeedToCall: true,
-    exportIgnoreStudentData: true,
-    exportSkipBlankContact: true,
+    exportIgnoreEnrolled: false,
+    exportIgnoreNoNeedToCall: false,
+    exportIgnoreStudentData: false,
+    exportSkipBlankContact: false,
     exportCols: {
         name: true,
         mob: true,
@@ -1545,40 +1545,80 @@ const cleanerDataDefinition = {
         XLSX.writeFile(wb, "Unique_Courses_Report.xlsx");
     },
 
-    cleanNameJS(rawName) {
-        if (!rawName || !String(rawName).trim()) return 'Student';
-        let str = String(rawName).trim().replace(/_/g, ' ');
+    extractNameFromEmail(email) {
+        if (!email || !String(email).includes('@')) return '';
+        let username = String(email).split('@')[0];
+        let cleanUser = username.replace(/[._\-]/g, ' ').replace(/[^a-zA-Z\u00C0-\u024F\u1E00-\u1EFF\s]/g, ' ').replace(/\s+/g, ' ').trim();
+        if (!cleanUser || cleanUser.length < 2) return '';
+        return cleanUser.toLowerCase().replace(/(?:^|\s)\S/g, function(a) { return a.toUpperCase(); });
+    },
 
-        const hindiMap = {
-            'अनुराग': 'Anurag', 'वर्मा': 'Verma', 'शालू': 'Shalu', 'कुमारी': 'Kumari',
-            'अंकित': 'Ankit', 'यादव': 'Yadav', 'सचिन': 'Sachin', 'प्रशांत': 'Prashant',
-            'क्ष': 'ksh', 'त्र': 'tr', 'ज्ञ': 'gya', 'श्र': 'shr',
-            'क': 'k', 'ख': 'kh', 'ग': 'g', 'घ': 'gh', 'ङ': 'n',
-            'च': 'ch', 'छ': 'chh', 'ज': 'j', 'झ': 'jh', 'ञ': 'n',
-            'ट': 't', 'ठ': 'th', 'ड': 'd', 'ढ': 'dh', 'ण': 'n',
-            'त': 't', 'थ': 'th', 'द': 'd', 'ध': 'dh', 'न': 'n',
-            'प': 'p', 'फ': 'f', 'ब': 'b', 'भ': 'bh', 'म': 'm',
-            'य': 'y', 'र': 'r', 'ल': 'l', 'व': 'v', 'श': 'sh', 'ष': 'sh', 'स': 's', 'ह': 'h',
-            'ड़': 'd', 'ढ़': 'dh',
-            'अ': 'a', 'आ': 'a', 'इ': 'i', 'ई': 'i', 'उ': 'u', 'ऊ': 'u', 'ऋ': 'ri', 'ए': 'e', 'ऐ': 'ai', 'ओ': 'o', 'औ': 'au',
-            'ा': 'a', 'ि': 'i', 'ी': 'i', 'ु': 'u', 'ू': 'u', 'ृ': 'ri', 'े': 'e', 'ै': 'ai', 'ो': 'o', 'ौ': 'au', 'ं': 'n', 'ः': 'h', '्': ''
-        };
+    generateUniqueIndianName(seed = 1) {
+        const firstNames = [
+            'Amit', 'Pooja', 'Rahul', 'Neha', 'Vikas', 'Priya', 'Anand', 'Sunita', 'Rajesh', 'Deepak',
+            'Sanjay', 'Kavita', 'Rohan', 'Anjali', 'Manish', 'Divya', 'Suresh', 'Meena', 'Alok', 'Swati',
+            'Gaurav', 'Ritu', 'Nitin', 'Shweta', 'Ashish', 'Komal', 'Saurabh', 'Kiran', 'Tarun', 'Poonam',
+            'Abhishek', 'Monika', 'Dinesh', 'Priti', 'Pawan', 'Reena', 'Vivek', 'Seema', 'Manoj', 'Aarti',
+            'Ravi', 'Jyoti', 'Sunil', 'Rekha', 'Pankaj', 'Suman', 'Ajay', 'Pinki', 'Naveen', 'Sarita',
+            'Vinod', 'Anju', 'Kapil', 'Vandana', 'Satish', 'Nisha', 'Mukesh', 'Archana', 'Vijay', 'Bhavna'
+        ];
 
-        if (/[\u0900-\u097F]/.test(str)) {
-            for (let key in hindiMap) {
-                if (str.includes(key)) {
-                    str = str.replace(new RegExp(key, 'g'), hindiMap[key]);
+        const lastNames = [
+            'Kumar', 'Sharma', 'Verma', 'Gupta', 'Singh', 'Patel', 'Mishra', 'Yadav', 'Mehta', 'Jha',
+            'Pandey', 'Shukla', 'Chaudhary', 'Deshmukh', 'Kulkarni', 'Reddy', 'Nair', 'Sengupta', 'Banerjee',
+            'Rathore', 'Joshi', 'Aggarwal', 'Tripathi', 'Thakur', 'Giri', 'Saxena', 'Tiwari', 'Dubey', 'Rawat', 'Srivastava'
+        ];
+
+        const fn = firstNames[seed % firstNames.length];
+        const ln = lastNames[(seed * 7 + 3) % lastNames.length];
+        return fn + ' ' + ln;
+    },
+
+    cleanNameJS(rawName, rawEmail = '', seed = 1) {
+        const invalidPlaceholders = ['student', 'n/a', 'na', 'null', 'none', 'undefined', 'blank', 'no name'];
+        const rawTrim = String(rawName || '').trim().toLowerCase();
+        const hasName = rawName && String(rawName).trim() && !invalidPlaceholders.includes(rawTrim);
+
+        if (hasName) {
+            let str = String(rawName).trim().replace(/_/g, ' ');
+
+            const hindiMap = {
+                'अनुराग': 'Anurag', 'वर्मा': 'Verma', 'शालू': 'Shalu', 'कुमारी': 'Kumari',
+                'अंकित': 'Ankit', 'यादव': 'Yadav', 'सचिन': 'Sachin', 'प्रशांत': 'Prashant',
+                'क्ष': 'ksh', 'त्र': 'tr', 'ज्ञ': 'gya', 'श्र': 'shr',
+                'क': 'k', 'ख': 'kh', 'ग': 'g', 'घ': 'gh', 'ङ': 'n',
+                'च': 'ch', 'छ': 'chh', 'ज': 'j', 'झ': 'jh', 'ञ': 'n',
+                'ट': 't', 'ठ': 'th', 'ड': 'd', 'ढ': 'dh', 'ण': 'n',
+                'त': 't', 'थ': 'th', 'द': 'd', 'ध': 'dh', 'न': 'n',
+                'प': 'p', 'फ': 'f', 'ब': 'b', 'भ': 'bh', 'म': 'm',
+                'य': 'y', 'र': 'r', 'ल': 'l', 'व': 'v', 'श': 'sh', 'ष': 'sh', 'स': 's', 'ह': 'h',
+                'ड़': 'd', 'ढ़': 'dh',
+                'अ': 'a', 'आ': 'a', 'इ': 'i', 'ई': 'i', 'उ': 'u', 'ऊ': 'u', 'ऋ': 'ri', 'ए': 'e', 'ऐ': 'ai', 'ओ': 'o', 'औ': 'au',
+                'ा': 'a', 'ि': 'i', 'ी': 'i', 'ु': 'u', 'ू': 'u', 'ृ': 'ri', 'े': 'e', 'ै': 'ai', 'ो': 'o', 'ौ': 'au', 'ं': 'n', 'ः': 'h', '्': ''
+            };
+
+            if (/[\u0900-\u097F]/.test(str)) {
+                for (let key in hindiMap) {
+                    if (str.includes(key)) {
+                        str = str.replace(new RegExp(key, 'g'), hindiMap[key]);
+                    }
                 }
+            }
+
+            let cleaned = str.replace(/[^a-zA-Z\u00C0-\u024F\u1E00-\u1EFF\s.\-']/g, ' ').replace(/\s+/g, ' ').trim();
+            if (cleaned && cleaned.length >= 2 && !invalidPlaceholders.includes(cleaned.toLowerCase())) {
+                return cleaned.toLowerCase().replace(/(?:^|\s|-|\.)\S/g, function(a) { return a.toUpperCase(); });
             }
         }
 
-        // Keep all letters (including accents Æ, ā, ñ, é), spaces, dots, hyphens, and apostrophes
-        // Strip emojis, numbers, and symbols
-        let cleaned = str.replace(/[^a-zA-Z\u00C0-\u024F\u1E00-\u1EFF\s.\-']/g, ' ').replace(/\s+/g, ' ').trim();
-        if (!cleaned || cleaned.length < 2) return 'Student';
+        // Priority 2: Extract text from email username if available
+        if (rawEmail) {
+            let emailExtracted = this.extractNameFromEmail(rawEmail);
+            if (emailExtracted) return emailExtracted;
+        }
 
-        // Title Case conversion
-        return cleaned.toLowerCase().replace(/(?:^|\s|-|\.)\S/g, function(a) { return a.toUpperCase(); });
+        // Priority 3: Fallback to unique Indian name generator
+        return this.generateUniqueIndianName(seed);
     },
 
     runCleaningEngine() {
@@ -1590,9 +1630,9 @@ const cleanerDataDefinition = {
         let seenEmails = new Set();
 
         this.rawDataset.forEach(row => {
-            let nameVal = this.cleanNameJS(this.getFlexibleRowValue(row, ['name', 'candidate', 'student', 'person'], this.mappings.nameCol));
-            let rawPhoneVal = this.getFlexibleRowValue(row, ['phone', 'mob', 'mobile', 'contact', 'whatsapp', 'ph'], this.mappings.phoneCol);
             let rawEmailVal = this.getFlexibleRowValue(row, ['email', 'mail', 'gmail'], this.mappings.emailCol);
+            let nameVal = this.cleanNameJS(this.getFlexibleRowValue(row, ['name', 'candidate', 'student', 'person'], this.mappings.nameCol), rawEmailVal, counter);
+            let rawPhoneVal = this.getFlexibleRowValue(row, ['phone', 'mob', 'mobile', 'contact', 'whatsapp', 'ph'], this.mappings.phoneCol);
             let courseVal = this.getFlexibleRowValue(row, ['course', 'subject', 'program', 'stream'], this.mappings.courseCol);
 
             // Skip completely empty Excel placeholder rows (where Name, Phone, Email & Course are ALL N/A or Blank)
@@ -1753,9 +1793,12 @@ const cleanerDataDefinition = {
     },
 
     triggerDynamicExport() {
-        let dataset = (this.exportTarget === 'vault') ? this.dbLeads : this.processedData;
+        let dataset = (this.dbLeads && this.dbLeads.length > 0) ? this.dbLeads : this.processedData;
+        if (!dataset || dataset.length === 0) {
+            dataset = (this.processedData && this.processedData.length > 0) ? this.processedData : this.dbLeads;
+        }
 
-        if (!dataset || dataset.length === 0) return alert('No data available to export!');
+        if (!dataset || dataset.length === 0) return alert('No data available to export! Please load database vault or import a file.');
 
         // Filter dataset based on category, source, status, and exclusion rules
         let filtered = dataset.filter(r => {
