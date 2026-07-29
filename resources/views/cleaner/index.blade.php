@@ -1573,7 +1573,7 @@ const cleanerDataDefinition = {
 
         // Keep all letters (including accents Æ, ā, ñ, é), spaces, dots, hyphens, and apostrophes
         // Strip emojis, numbers, and symbols
-        let cleaned = str.replace(/[^\p{L}\s\.\-\']/gu, ' ').replace(/\s+/g, ' ').trim();
+        let cleaned = str.replace(/[^a-zA-Z\u00C0-\u024F\u1E00-\u1EFF\s.\-']/g, ' ').replace(/\s+/g, ' ').trim();
         if (!cleaned || cleaned.length < 2) return str;
 
         // Title Case conversion
