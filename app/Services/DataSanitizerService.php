@@ -31,12 +31,12 @@ class DataSanitizerService
 
     /**
      * Clean Name: Preserve all Unicode letters (Æ, ā, ñ, é), dots (C. S.), hyphens, apostrophes.
-     * Replaces underscores with spaces and formats in proper Title Case.
+     * Replaces underscores with spaces, defaults blank names to "Student", and formats in Title Case.
      */
     public function cleanName(?string $rawName): string
     {
         if (empty($rawName) || !trim((string)$rawName)) {
-            return '';
+            return 'Student';
         }
 
         $str = trim((string)$rawName);
@@ -53,7 +53,7 @@ class DataSanitizerService
         $cleaned = trim(preg_replace('/\s+/', ' ', $cleaned));
 
         if (empty($cleaned) || strlen($cleaned) < 2) {
-            return $str;
+            return 'Student';
         }
 
         // Title Case formatting
@@ -106,7 +106,7 @@ class DataSanitizerService
     }
 
     /**
-     * Clean & Validate Phone/Mob: Extract last 10 digits from right side if >= 10 digits.
+     * Clean & Validate Phone/Mob: Extract last 10 digits from right side and prepend '91' (without +).
      * Supports Nepal and international numbers (7+ digits).
      */
     public function cleanPhone(?string $rawPhone): array
@@ -122,15 +122,17 @@ class DataSanitizerService
             return ['value' => '', 'is_valid' => false, 'reason' => 'Blank Phone'];
         }
 
-        // Extract 10 digits from right side if >= 10 digits
+        // Extract 10 digits from right side if >= 10 digits and prepend 91 (without +)
         if (strlen($digits) >= 10) {
-            $cleaned = substr($digits, -10);
+            $last10 = substr($digits, -10);
+            $cleaned = '91' . $last10;
             return ['value' => $cleaned, 'is_valid' => true, 'reason' => ''];
         }
 
-        // Support Nepal & International numbers (7 to 9 digits)
+        // Support Nepal & International numbers (7 to 9 digits) - prepend 91 if not present
         if (strlen($digits) >= 7) {
-            return ['value' => $digits, 'is_valid' => true, 'reason' => ''];
+            $cleaned = str_starts_with($digits, '91') ? $digits : ('91' . $digits);
+            return ['value' => $cleaned, 'is_valid' => true, 'reason' => ''];
         }
 
         return ['value' => $digits, 'is_valid' => false, 'reason' => 'Short Phone Number'];

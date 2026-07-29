@@ -1420,15 +1420,16 @@ const cleanerDataDefinition = {
 
         if (!digits) return { isValid: false, reason: 'Blank Phone', digits: '' };
 
-        // Extract 10 digits from right side if length >= 10
+        // Extract 10 digits from right side if length >= 10 and prepend 91 (without +)
         if (digits.length >= 10) {
             let rightmost10 = digits.slice(-10);
-            return { isValid: true, reason: '', digits: rightmost10 };
+            return { isValid: true, reason: '', digits: '91' + rightmost10 };
         }
 
-        // Support Nepal & International numbers (7 to 9 digits)
+        // Support Nepal & International numbers (7 to 9 digits) - prepend 91 if not present
         if (digits.length >= 7) {
-            return { isValid: true, reason: '', digits: digits };
+            let cleaned = digits.startsWith('91') ? digits : ('91' + digits);
+            return { isValid: true, reason: '', digits: cleaned };
         }
 
         return { isValid: false, reason: 'Short Phone Number', digits: digits };
@@ -1545,7 +1546,7 @@ const cleanerDataDefinition = {
     },
 
     cleanNameJS(rawName) {
-        if (!rawName || !String(rawName).trim()) return '';
+        if (!rawName || !String(rawName).trim()) return 'Student';
         let str = String(rawName).trim().replace(/_/g, ' ');
 
         const hindiMap = {
@@ -1574,7 +1575,7 @@ const cleanerDataDefinition = {
         // Keep all letters (including accents Æ, ā, ñ, é), spaces, dots, hyphens, and apostrophes
         // Strip emojis, numbers, and symbols
         let cleaned = str.replace(/[^a-zA-Z\u00C0-\u024F\u1E00-\u1EFF\s.\-']/g, ' ').replace(/\s+/g, ' ').trim();
-        if (!cleaned || cleaned.length < 2) return str;
+        if (!cleaned || cleaned.length < 2) return 'Student';
 
         // Title Case conversion
         return cleaned.toLowerCase().replace(/(?:^|\s|-|\.)\S/g, function(a) { return a.toUpperCase(); });
