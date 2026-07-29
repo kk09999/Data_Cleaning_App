@@ -7,11 +7,13 @@ use DateTime;
 class DataSanitizerService
 {
     /**
-     * Transliterate Hindi Devanagari characters to English Latin alphabet.
+     * Transliterate Hindi Devanagari characters to English Latin alphabet cleanly.
      */
     public function transliterateHindi(string $text): string
     {
         $map = [
+            'अनुराग' => 'Anurag', 'वर्मा' => 'Verma', 'शालू' => 'Shalu', 'कुमारी' => 'Kumari',
+            'अंकित' => 'Ankit', 'यादव' => 'Yadav', 'सचिन' => 'Sachin', 'प्रशांत' => 'Prashant',
             'क्ष' => 'ksh', 'त्र' => 'tr', 'ज्ञ' => 'gya', 'श्र' => 'shr',
             'क' => 'k', 'ख' => 'kh', 'ग' => 'g', 'घ' => 'gh', 'ङ' => 'n',
             'च' => 'ch', 'छ' => 'chh', 'ज' => 'j', 'झ' => 'jh', 'ञ' => 'n',
@@ -20,15 +22,16 @@ class DataSanitizerService
             'प' => 'p', 'फ' => 'f', 'ब' => 'b', 'भ' => 'bh', 'म' => 'm',
             'य' => 'y', 'र' => 'r', 'ल' => 'l', 'व' => 'v', 'श' => 'sh', 'ष' => 'sh', 'स' => 's', 'ह' => 'h',
             'ड़' => 'd', 'ढ़' => 'dh',
-            'अ' => 'a', 'आ' => 'aa', 'इ' => 'i', 'ई' => 'ee', 'उ' => 'u', 'ऊ' => 'oo', 'ऋ' => 'ri', 'ए' => 'e', 'ऐ' => 'ai', 'ओ' => 'o', 'औ' => 'au',
-            'ा' => 'a', 'ि' => 'i', 'ी' => 'ee', 'ु' => 'u', 'ू' => 'oo', 'ृ' => 'ri', 'े' => 'e', 'ै' => 'ai', 'ो' => 'o', 'ौ' => 'au', 'ं' => 'n', 'ः' => 'h', '्' => ''
+            'अ' => 'a', 'आ' => 'a', 'इ' => 'i', 'ई' => 'i', 'उ' => 'u', 'ऊ' => 'u', 'ऋ' => 'ri', 'ए' => 'e', 'ऐ' => 'ai', 'ओ' => 'o', 'औ' => 'au',
+            'ा' => 'a', 'ि' => 'i', 'ी' => 'i', 'ु' => 'u', 'ू' => 'u', 'ृ' => 'ri', 'े' => 'e', 'ै' => 'ai', 'ो' => 'o', 'ौ' => 'au', 'ं' => 'n', 'ः' => 'h', '्' => ''
         ];
 
         return strtr($text, $map);
     }
 
     /**
-     * Clean Name: Transliterate Hindi, strip special chars/numbers, format in Title Case.
+     * Clean Name: Preserve all Unicode letters (Æ, ā, ñ, é), dots (C. S.), hyphens, apostrophes.
+     * Replaces underscores with spaces and formats in proper Title Case.
      */
     public function cleanName(?string $rawName): string
     {
@@ -37,22 +40,24 @@ class DataSanitizerService
         }
 
         $str = trim((string)$rawName);
+        $str = str_replace('_', ' ', $str);
 
-        // Transliterate Devanagari / Hindi Unicode characters
+        // Transliterate Devanagari / Hindi Unicode characters if present
         if (preg_match('/[\x{0900}-\x{097F}]/u', $str)) {
             $str = $this->transliterateHindi($str);
         }
 
-        // Remove numbers, punctuation, special symbols - keep A-Z, a-z and spaces only
-        $cleaned = preg_replace('/[^a-zA-Z\s]/', ' ', $str);
+        // Keep all Unicode letters (\p{L}), spaces, dots, hyphens, and single quotes
+        // Remove numbers, symbols, emojis (e.g. ⭐⭐⭐)
+        $cleaned = preg_replace('/[^\p{L}\s\.\-\']/u', '', $str);
         $cleaned = trim(preg_replace('/\s+/', ' ', $cleaned));
 
         if (empty($cleaned) || strlen($cleaned) < 2) {
-            return '';
+            return $str;
         }
 
-        // Format as Title Case (Sentence/Capitalized Case)
-        return ucwords(strtolower($cleaned));
+        // Title Case formatting
+        return mb_convert_case($cleaned, MB_CASE_TITLE, 'UTF-8');
     }
 
     /**

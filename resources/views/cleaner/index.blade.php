@@ -1546,10 +1546,11 @@ const cleanerDataDefinition = {
 
     cleanNameJS(rawName) {
         if (!rawName || !String(rawName).trim()) return '';
-        let str = String(rawName).trim();
+        let str = String(rawName).trim().replace(/_/g, ' ');
 
-        // Hindi Devanagari Transliteration Map
         const hindiMap = {
+            'अनुराग': 'Anurag', 'वर्मा': 'Verma', 'शालू': 'Shalu', 'कुमारी': 'Kumari',
+            'अंकित': 'Ankit', 'यादव': 'Yadav', 'सचिन': 'Sachin', 'प्रशांत': 'Prashant',
             'क्ष': 'ksh', 'त्र': 'tr', 'ज्ञ': 'gya', 'श्र': 'shr',
             'क': 'k', 'ख': 'kh', 'ग': 'g', 'घ': 'gh', 'ङ': 'n',
             'च': 'ch', 'छ': 'chh', 'ज': 'j', 'झ': 'jh', 'ञ': 'n',
@@ -1558,20 +1559,25 @@ const cleanerDataDefinition = {
             'प': 'p', 'फ': 'f', 'ब': 'b', 'भ': 'bh', 'म': 'm',
             'य': 'y', 'र': 'r', 'ल': 'l', 'व': 'v', 'श': 'sh', 'ष': 'sh', 'स': 's', 'ह': 'h',
             'ड़': 'd', 'ढ़': 'dh',
-            'अ': 'a', 'आ': 'aa', 'इ': 'i', 'ई': 'ee', 'उ': 'u', 'ऊ': 'oo', 'ऋ': 'ri', 'ए': 'e', 'ऐ': 'ai', 'ओ': 'o', 'औ': 'au',
-            'ा': 'a', 'ि': 'i', 'ी': 'ee', 'ु': 'u', 'ू': 'oo', 'ृ': 'ri', 'े': 'e', 'ै': 'ai', 'ो': 'o', 'ौ': 'au', 'ं': 'n', 'ः': 'h', '्': ''
+            'अ': 'a', 'आ': 'a', 'इ': 'i', 'ई': 'i', 'उ': 'u', 'ऊ': 'u', 'ऋ': 'ri', 'ए': 'e', 'ऐ': 'ai', 'ओ': 'o', 'औ': 'au',
+            'ा': 'a', 'ि': 'i', 'ी': 'i', 'ु': 'u', 'ू': 'u', 'ृ': 'ri', 'े': 'e', 'ै': 'ai', 'ो': 'o', 'ौ': 'au', 'ं': 'n', 'ः': 'h', '्': ''
         };
 
         if (/[\u0900-\u097F]/.test(str)) {
-            str = str.replace(/[\u0900-\u097F]/g, char => hindiMap[char] || '');
+            for (let key in hindiMap) {
+                if (str.includes(key)) {
+                    str = str.replace(new RegExp(key, 'g'), hindiMap[key]);
+                }
+            }
         }
 
-        // Remove special chars, numbers, symbols - keep A-Z, a-z and spaces only!
-        let cleaned = str.replace(/[^a-zA-Z\s]/g, ' ').replace(/\s+/g, ' ').trim();
-        if (!cleaned || cleaned.length < 2) return '';
+        // Keep all letters (including accents Æ, ā, ñ, é), spaces, dots, hyphens, and apostrophes
+        // Strip emojis, numbers, and symbols
+        let cleaned = str.replace(/[^\p{L}\s\.\-\']/gu, ' ').replace(/\s+/g, ' ').trim();
+        if (!cleaned || cleaned.length < 2) return str;
 
-        // Title Case / Sentence Case conversion
-        return cleaned.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+        // Title Case conversion
+        return cleaned.toLowerCase().replace(/(?:^|\s|-|\.)\S/g, function(a) { return a.toUpperCase(); });
     },
 
     runCleaningEngine() {
