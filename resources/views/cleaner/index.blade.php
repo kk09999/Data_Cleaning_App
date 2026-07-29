@@ -60,6 +60,14 @@
 
             <button 
                 class="btn" 
+                style="justify-content: flex-start; width: 100%; border-radius: 10px; padding: 11px 16px; font-size: 13.5px; background: #7c3aed; color: white;"
+                @click="exportUniqueCoursesReport()"
+            >
+                <i data-lucide="graduation-cap" style="width:18px"></i> Export Unique Courses
+            </button>
+
+            <button 
+                class="btn" 
                 style="justify-content: flex-start; width: 100%; border-radius: 10px; padding: 11px 16px; font-size: 13px; background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5;"
                 @click="wipeAllDatabaseLeads()"
             >
@@ -330,6 +338,9 @@
                     <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                         <button class="btn btn-primary" @click="openAddLeadModal()">
                             <i data-lucide="plus-circle" style="width:16px"></i> ➕ Add Lead
+                        </button>
+                        <button class="btn" style="background:#7c3aed; color:white;" @click="exportUniqueCoursesReport()">
+                            <i data-lucide="graduation-cap" style="width:16px"></i> 🎓 Unique Courses
                         </button>
                         <button class="btn btn-gold" @click="openExportModal('vault')">
                             <i data-lucide="sliders" style="width:16px"></i> Custom Export
@@ -848,8 +859,9 @@
                 </div>
             </div>
 
-            <div style="display: flex; gap: 12px; justify-content: flex-end; border-top: 1px solid var(--border-color); padding-top: 15px;">
+            <div style="display: flex; gap: 12px; justify-content: flex-end; border-top: 1px solid var(--border-color); padding-top: 15px; flex-wrap: wrap;">
                 <button class="btn btn-outline" @click="exportModalOpen = false">Cancel</button>
+                <button class="btn" style="background:#7c3aed; color:white;" @click="exportUniqueCoursesReport()">🎓 Export Unique Courses (.xlsx)</button>
                 <button class="btn btn-primary" @click="triggerStreamCsvExport()">⚡ Stream CSV Download</button>
                 <button class="btn btn-gold" @click="triggerDynamicExport()">📊 Download Excel (.xlsx)</button>
             </div>
@@ -1146,39 +1158,257 @@ const cleanerDataDefinition = {
     },
 
     categorizeCourse(courseStr) {
-        if (!courseStr) return 'Other';
-        const str = String(courseStr).toUpperCase();
-        if (str.includes('DA') || str.includes('DATA') || str.includes('AI') || str.includes('PYTHON') || str.includes('POWER BI') || str.includes('EXCEL') || str.includes('CGAI')) {
-            return 'Data Analyst and Scientist';
+        if (!courseStr || !String(courseStr).trim()) return 'Other';
+        const courseKey = String(courseStr).trim().toLowerCase();
+
+        const exactMap = {
+            'c-da': 'Data Analyst and Scientist',
+            'm-da': 'Data Analyst and Scientist',
+            'ex-da': 'Data Analyst and Scientist',
+            'pyca': 'Data Analyst and Scientist',
+            'pbi': 'Data Analyst and Scientist',
+            'm-da+vba': 'Data Analyst and Scientist',
+            'data analytics': 'Data Analyst and Scientist',
+            'data science': 'Data Analyst and Scientist',
+            'pbi+asql': 'Data Analyst and Scientist',
+            'ad excel': 'Data Analyst and Scientist',
+            'ad ex+tally': 'Data Analyst and Scientist',
+            'ad ex+pbi': 'Data Analyst and Scientist',
+            'python': 'Data Analyst and Scientist',
+            'asql': 'Data Analyst and Scientist',
+            'mern+ad ex': 'Data Analyst and Scientist',
+            'mern+ad excel': 'Data Analyst and Scientist',
+            'mso+ad excel': 'Data Analyst and Scientist',
+            'mis': 'Data Analyst and Scientist',
+            'ad excel+mso': 'Data Analyst and Scientist',
+            'mso+m-da': 'Data Analyst and Scientist',
+            'cds': 'Data Analyst and Scientist',
+            'cgai': 'Data Analyst and Scientist',
+            'pcds': 'Data Analyst and Scientist',
+            'ai': 'Data Analyst and Scientist',
+            'da+cgai': 'Data Analyst and Scientist',
+            'mda': 'Data Analyst and Scientist',
+            'da+data science': 'Data Analyst and Scientist',
+            'ex': 'Data Analyst and Scientist',
+            'vda': 'Data Analyst and Scientist',
+            'sql & python': 'Data Analyst and Scientist',
+            'python+ai': 'Data Analyst and Scientist',
+            'python advance': 'Data Analyst and Scientist',
+            'ex+sql': 'Data Analyst and Scientist',
+            'ex+python': 'Data Analyst and Scientist',
+            'computer training for accounting': 'Data Analyst and Scientist',
+            'mis+pbi': 'Data Analyst and Scientist',
+            'python+ai+ml': 'Data Analyst and Scientist',
+            'ex+da+r': 'Data Analyst and Scientist',
+            'mso+mis': 'Data Analyst and Scientist',
+            'python core': 'Data Analyst and Scientist',
+            'sql': 'Data Analyst and Scientist',
+            'ai+ml': 'Data Analyst and Scientist',
+            'sql+pbi+tableau': 'Data Analyst and Scientist',
+            'sql+pbi+tereau': 'Data Analyst and Scientist',
+            'ad excel+typing': 'Data Analyst and Scientist',
+            'chat gpt': 'Data Analyst and Scientist',
+            'mso+cda': 'Data Analyst and Scientist',
+            'ad excel+pay roll': 'Data Analyst and Scientist',
+            'ot': 'Data Analyst and Scientist',
+            'corporate training': 'Data Analyst and Scientist',
+            'da+pcds': 'Data Analyst and Scientist',
+            'mda+cgai': 'Data Analyst and Scientist',
+
+            'tally gst': 'Accounting and Taxation',
+            'gst+itr': 'Accounting and Taxation',
+            'cea': 'Accounting and Taxation',
+            'cfa-pro': 'Accounting and Taxation',
+            'tally': 'Accounting and Taxation',
+            'cea-a': 'Accounting and Taxation',
+            'tds+gst': 'Accounting and Taxation',
+            'itr e-filing': 'Accounting and Taxation',
+            'cea-p': 'Accounting and Taxation',
+            'gst+tds': 'Accounting and Taxation',
+            'umna': 'Accounting and Taxation',
+            'gst': 'Accounting and Taxation',
+            'accounting': 'Accounting and Taxation',
+            'itr': 'Accounting and Taxation',
+            'caf': 'Accounting and Taxation',
+            'gst e-filing': 'Accounting and Taxation',
+            'acaf': 'Accounting and Taxation',
+            'mso+tally': 'Accounting and Taxation',
+            'mcaf': 'Accounting and Taxation',
+            'acct for taxation': 'Accounting and Taxation',
+            'sap': 'Accounting and Taxation',
+            'busy': 'Accounting and Taxation',
+            'tally+busy+gst': 'Accounting and Taxation',
+            'acaa': 'Accounting and Taxation',
+            'tally gst+e-filing+itr': 'Accounting and Taxation',
+            'cfa-p': 'Accounting and Taxation',
+            'cea pro': 'Accounting and Taxation',
+
+            'wd+java': 'Full Stack Developer',
+            'wd+pyca': 'Full Stack Developer',
+            'digital mkt': 'Full Stack Developer',
+            'wd': 'Full Stack Developer',
+            'full stack+mern': 'Full Stack Developer',
+            'wd+php': 'Full Stack Developer',
+            'digital marketing': 'Full Stack Developer',
+            'c & c++': 'Full Stack Developer',
+            'c': 'Full Stack Developer',
+            'programming': 'Full Stack Developer',
+            'bca': 'Full Stack Developer',
+            '.net': 'Full Stack Developer',
+            'mern': 'Full Stack Developer',
+            'java core+ad': 'Full Stack Developer',
+            'c++': 'Full Stack Developer',
+            'c++ & java': 'Full Stack Developer',
+            'java': 'Full Stack Developer',
+            'ncad': 'Full Stack Developer',
+            'mcrn': 'Full Stack Developer',
+            'react js': 'Full Stack Developer',
+            '.net+sql': 'Full Stack Developer',
+            'dsa': 'Full Stack Developer',
+            'c++ & pyca': 'Full Stack Developer',
+            'wd+mern+dsa': 'Full Stack Developer',
+            'seo': 'Full Stack Developer',
+            'wd+tally': 'Full Stack Developer',
+            'wd+node': 'Full Stack Developer',
+            'c & java': 'Full Stack Developer',
+            'wd+mern': 'Full Stack Developer',
+            'wd+python': 'Full Stack Developer',
+            'c-da+mso': 'Full Stack Developer',
+            'c & c++-python': 'Full Stack Developer',
+
+            'unspecified / direct course': 'Other',
+            'computer course': 'Other',
+            'ms office': 'Other',
+            'mso': 'Other',
+            'cd': 'Other',
+            'other course': 'Other',
+            'ms ofc': 'Other',
+            'ccc': 'Other',
+            'cti': 'Other',
+            'other': 'Other',
+            'o level': 'Other',
+            'computer typing': 'Other',
+            'pgdca': 'Other',
+            'coreldraw': 'Other',
+            'ppc': 'Other',
+            'english': 'Other',
+            'mso+gd': 'Other',
+            'photoshop': 'Other',
+            'ccc+': 'Other',
+            'bcc': 'Other',
+            'placement': 'Other',
+            'mso+wd': 'Other',
+            'web': 'Other',
+            'computer': 'Other',
+            'ecc': 'Other'
+        };
+
+        if (exactMap[courseKey]) {
+            return exactMap[courseKey];
         }
-        if (str.includes('TALLY') || str.includes('GST') || str.includes('ACCOUNT') || str.includes('TAX')) {
+
+        if (/tally|gst|itr|tds|accounting|tax|cea|cfa|caf|busy|sap/i.test(courseKey)) {
             return 'Accounting and Taxation';
         }
-        if (str.includes('FULL STACK') || str.includes('WEB') || str.includes('MERN') || str.includes('JAVA') || str.includes('DEVELOPER')) {
+        if (/da|data|ai|python|pbi|power bi|sql|excel|mis|analytics|science|cgai|vda|cds|mda|chat gpt/i.test(courseKey)) {
+            return 'Data Analyst and Scientist';
+        }
+        if (/wd|web|mern|react|node|java|c\+\+|dsa|developer|programming|bca|full stack|digital marketing|seo|\.net/i.test(courseKey)) {
             return 'Full Stack Developer';
         }
+
         return 'Other';
     },
 
     parseRealDateAndMonth(val) {
-        if (!val) {
-            const now = new Date();
-            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-            return { date: now.toISOString().slice(0,10), month: monthNames[now.getMonth()], year: String(now.getFullYear()), quarter: 'Q1' };
-        }
         const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-        let str = String(val).trim();
-        let parts = str.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
-        if (parts) {
-            let day = parseInt(parts[1], 10);
-            let monthNum = parseInt(parts[2], 10);
-            let yearNum = parseInt(parts[3], 10);
-            if (yearNum < 100) yearNum += 2000;
-            let quarter = (monthNum >= 4 && monthNum <= 6) ? 'Q2' : ((monthNum >= 7 && monthNum <= 9) ? 'Q3' : ((monthNum >= 10 && monthNum <= 12) ? 'Q4' : 'Q1'));
-            return { date: `${yearNum}-${String(monthNum).padStart(2,'0')}-${String(day).padStart(2,'0')}`, month: monthNames[monthNum - 1] || 'March', year: String(yearNum), quarter: quarter };
+        const monthShorts = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+
+        if (!val || String(val).trim() === '' || String(val).trim().toUpperCase() === 'N/A') {
+            return { date: '', month: '', year: '', quarter: '' };
         }
-        const now = new Date();
-        return { date: str, month: monthNames[now.getMonth()], year: String(now.getFullYear()), quarter: 'Q1' };
+
+        let str = String(val).trim();
+        let day = 0, monthNum = 0, yearNum = 0;
+
+        // 1. Check Excel Serial Number (e.g. 45480)
+        let num = parseFloat(str);
+        if (!isNaN(num) && num > 10000 && num < 100000) {
+            let utc_days = Math.floor(num - 25569);
+            let utc_value = utc_days * 86400;
+            let date_info = new Date(utc_value * 1000);
+            day = date_info.getUTCDate();
+            monthNum = date_info.getUTCMonth() + 1;
+            yearNum = date_info.getUTCFullYear();
+        } 
+        // 2. Check numeric pattern yyyy-mm-dd
+        else if (/^\d{4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2}$/.test(str)) {
+            let p = str.split(/[\/\-\.]/);
+            yearNum = parseInt(p[0], 10);
+            monthNum = parseInt(p[1], 10);
+            day = parseInt(p[2], 10);
+        } 
+        // 3. Check numeric pattern dd/mm/yyyy or mm/dd/yyyy
+        else if (/^\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}$/.test(str)) {
+            let p = str.split(/[\/\-\.]/);
+            let a = parseInt(p[0], 10);
+            let b = parseInt(p[1], 10);
+            let y = parseInt(p[2], 10);
+            if (y < 100) y += 2000;
+
+            if (a > 12 && b <= 12) { day = a; monthNum = b; yearNum = y; }
+            else if (b > 12 && a <= 12) { monthNum = a; day = b; yearNum = y; }
+            else { day = a; monthNum = b; yearNum = y; }
+        } 
+        // 4. Check textual month pattern e.g. 31-Jan-2025 or 31-Jul-2025 or 31 Jan 2025
+        else if (/[a-zA-Z]/.test(str)) {
+            let matches = str.match(/(\d{1,2})[\/\-\.\s]+([a-zA-Z]+)[\/\-\.\s]+(\d{2,4})/);
+            if (!matches) {
+                matches = str.match(/([a-zA-Z]+)[\/\-\.\s]+(\d{1,2})[\/\-\.\s,]+(\d{2,4})/);
+                if (matches) {
+                    let mStr = matches[1].toLowerCase().slice(0, 3);
+                    let mIdx = monthShorts.indexOf(mStr);
+                    if (mIdx !== -1) monthNum = mIdx + 1;
+                    day = parseInt(matches[2], 10);
+                    yearNum = parseInt(matches[3], 10);
+                    if (yearNum < 100) yearNum += 2000;
+                }
+            } else {
+                day = parseInt(matches[1], 10);
+                let mStr = matches[2].toLowerCase().slice(0, 3);
+                let mIdx = monthShorts.indexOf(mStr);
+                if (mIdx !== -1) monthNum = mIdx + 1;
+                yearNum = parseInt(matches[3], 10);
+                if (yearNum < 100) yearNum += 2000;
+            }
+
+            if (!monthNum) {
+                let parsedDate = new Date(str);
+                if (!isNaN(parsedDate.getTime())) {
+                    day = parsedDate.getDate();
+                    monthNum = parsedDate.getMonth() + 1;
+                    yearNum = parsedDate.getFullYear();
+                }
+            }
+        }
+
+        let formattedDate = str;
+        let monthName = '';
+        let yearStr = '';
+        let quarterStr = '';
+
+        if (monthNum >= 1 && monthNum <= 12 && yearNum > 1990 && yearNum < 2050) {
+            monthName = monthNames[monthNum - 1];
+            yearStr = String(yearNum);
+            formattedDate = `${day ? String(day).padStart(2,'0') + '-' : ''}${monthName.slice(0,3)}-${yearStr}`;
+
+            if (monthNum >= 1 && monthNum <= 3) quarterStr = 'Q1';
+            else if (monthNum >= 4 && monthNum <= 6) quarterStr = 'Q2';
+            else if (monthNum >= 7 && monthNum <= 9) quarterStr = 'Q3';
+            else if (monthNum >= 10 && monthNum <= 12) quarterStr = 'Q4';
+        }
+
+        return { date: formattedDate, month: monthName, year: yearStr, quarter: quarterStr };
     },
 
     validatePhoneJS(rawPhone) {
@@ -1207,16 +1437,141 @@ const cleanerDataDefinition = {
     validateEmailJS(rawEmail) {
         if (!rawEmail || !String(rawEmail).trim()) return { isValid: false, reason: 'Blank Email', email: '' };
         let email = String(rawEmail).trim().toLowerCase().replace(/\s+/g, '');
-        email = email.replace(/@gmaill?\.com$/i, '@gmail.com').replace(/@gmai\.com$/i, '@gmail.com');
 
-        const dummy = ['test@test.com','noemail@gmail.com','na@gmail.com','none@gmail.com','null@gmail.com','abc@xyz.com','no@email.com','email@gmail.com','xyz@gmail.com','dummy@gmail.com','sample@gmail.com'];
-        if (dummy.includes(email)) return { isValid: false, reason: 'Dummy Email', email: email };
+        const junk = ['0', '-', '--', 'n/a', 'na', 'null', 'undefined', 'none', 'blank', 'space', 'c', 'cti', 'computer course', 'bca'];
+        if (junk.includes(email) || !email.includes('@')) {
+            return { isValid: false, reason: 'Invalid Email Syntax', email: '' };
+        }
+
+        // Domain typos auto-correction
+        email = email.replace(/@gamill?\.com$/i, '@gmail.com')
+                     .replace(/@gamil\.com$/i, '@gmail.com')
+                     .replace(/@gmial\.com$/i, '@gmail.com')
+                     .replace(/@gmaill?\.com$/i, '@gmail.com')
+                     .replace(/@gmai\.com$/i, '@gmail.com')
+                     .replace(/@hotmaill?\.com$/i, '@hotmail.com')
+                     .replace(/@yahooo?\.com$/i, '@yahoo.com');
+
+        const dummy = ['test@test.com','noemail@gmail.com','na@gmail.com','none@gmail.com','null@gmail.com','abc@xyz.com','no@email.com','email@gmail.com','xyz@gmail.com','dummy@gmail.com','sample@gmail.com','user@gmail.com'];
+        if (dummy.includes(email)) return { isValid: false, reason: 'Dummy Email', email: '' };
 
         if (/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(email)) {
             return { isValid: true, reason: '', email: email };
         }
 
-        return { isValid: false, reason: 'Invalid Email Syntax', email: email };
+        return { isValid: false, reason: 'Invalid Email Syntax', email: '' };
+    },
+
+    getFlexibleRowValue(row, targetKeywords, primaryCol = '') {
+        if (primaryCol && row[primaryCol] !== undefined && row[primaryCol] !== null) {
+            const val = String(row[primaryCol]).trim();
+            if (val && val.toUpperCase() !== 'N/A' && val.toUpperCase() !== 'NULL' && val.toUpperCase() !== 'UNDEFINED') {
+                return val;
+            }
+        }
+
+        const rowKeys = Object.keys(row);
+        for (let key of rowKeys) {
+            if (key === '_sheet_name') continue;
+            const cleanKey = String(key).toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+
+            for (let kw of targetKeywords) {
+                if (cleanKey.includes(kw)) {
+                    const val = String(row[key] || '').trim();
+                    if (val && val.toUpperCase() !== 'N/A' && val.toUpperCase() !== 'NULL' && val.toUpperCase() !== 'UNDEFINED') {
+                        return val;
+                    }
+                }
+            }
+        }
+        return '';
+    },
+
+    exportUniqueCoursesReport() {
+        let dataset = (this.dbLeads && this.dbLeads.length > 0) ? this.dbLeads : this.processedData;
+
+        if (!dataset || dataset.length === 0) {
+            return alert('No dataset available to export unique courses!');
+        }
+
+        const courseGroups = {};
+
+        dataset.forEach(r => {
+            let course = String(r.Raw_Course || r.raw_course || '').trim();
+            if (!course || course.toUpperCase() === 'N/A' || course.toUpperCase() === 'NULL') {
+                course = 'Unspecified / Direct Course';
+            }
+
+            let cat = r.Major_Category || r.major_category || this.categorizeCourse(course);
+            let status = String(r.Status || r.status || '').toLowerCase();
+
+            if (!courseGroups[course]) {
+                courseGroups[course] = {
+                    course: course,
+                    category: cat,
+                    total: 0,
+                    enrolled: 0,
+                    visited: 0,
+                    activeFollowup: 0
+                };
+            }
+
+            courseGroups[course].total++;
+            if (status.includes('enrol') || status.includes('confirm')) {
+                courseGroups[course].enrolled++;
+            }
+            if (status.includes('visit')) {
+                courseGroups[course].visited++;
+            }
+            if (status.includes('will') || status.includes('call') || status.includes('expected') || status.includes('next')) {
+                courseGroups[course].activeFollowup++;
+            }
+        });
+
+        const exportRows = Object.values(courseGroups).map((item, idx) => ({
+            '#': idx + 1,
+            'Unique Course Name': item.course,
+            'Major Category': item.category,
+            'Total Inflow Leads': item.total,
+            'Enrolled & Confirmed': item.enrolled,
+            'Campus Visited': item.visited,
+            'Active Follow-ups': item.activeFollowup
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(exportRows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Unique_Courses_Report");
+        XLSX.writeFile(wb, "Unique_Courses_Report.xlsx");
+    },
+
+    cleanNameJS(rawName) {
+        if (!rawName || !String(rawName).trim()) return '';
+        let str = String(rawName).trim();
+
+        // Hindi Devanagari Transliteration Map
+        const hindiMap = {
+            'क्ष': 'ksh', 'त्र': 'tr', 'ज्ञ': 'gya', 'श्र': 'shr',
+            'क': 'k', 'ख': 'kh', 'ग': 'g', 'घ': 'gh', 'ङ': 'n',
+            'च': 'ch', 'छ': 'chh', 'ज': 'j', 'झ': 'jh', 'ञ': 'n',
+            'ट': 't', 'ठ': 'th', 'ड': 'd', 'ढ': 'dh', 'ण': 'n',
+            'त': 't', 'थ': 'th', 'द': 'd', 'ध': 'dh', 'न': 'n',
+            'प': 'p', 'फ': 'f', 'ब': 'b', 'भ': 'bh', 'म': 'm',
+            'य': 'y', 'र': 'r', 'ल': 'l', 'व': 'v', 'श': 'sh', 'ष': 'sh', 'स': 's', 'ह': 'h',
+            'ड़': 'd', 'ढ़': 'dh',
+            'अ': 'a', 'आ': 'aa', 'इ': 'i', 'ई': 'ee', 'उ': 'u', 'ऊ': 'oo', 'ऋ': 'ri', 'ए': 'e', 'ऐ': 'ai', 'ओ': 'o', 'औ': 'au',
+            'ा': 'a', 'ि': 'i', 'ी': 'ee', 'ु': 'u', 'ू': 'oo', 'ृ': 'ri', 'े': 'e', 'ै': 'ai', 'ो': 'o', 'ौ': 'au', 'ं': 'n', 'ः': 'h', '्': ''
+        };
+
+        if (/[\u0900-\u097F]/.test(str)) {
+            str = str.replace(/[\u0900-\u097F]/g, char => hindiMap[char] || '');
+        }
+
+        // Remove special chars, numbers, symbols - keep A-Z, a-z and spaces only!
+        let cleaned = str.replace(/[^a-zA-Z\s]/g, ' ').replace(/\s+/g, ' ').trim();
+        if (!cleaned || cleaned.length < 2) return '';
+
+        // Title Case / Sentence Case conversion
+        return cleaned.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
     },
 
     runCleaningEngine() {
@@ -1228,10 +1583,10 @@ const cleanerDataDefinition = {
         let seenEmails = new Set();
 
         this.rawDataset.forEach(row => {
-            let nameVal = this.mappings.nameCol ? String(row[this.mappings.nameCol] || '').trim() : '';
-            let rawPhoneVal = this.mappings.phoneCol ? row[this.mappings.phoneCol] : '';
-            let rawEmailVal = this.mappings.emailCol ? row[this.mappings.emailCol] : '';
-            let courseVal = this.mappings.courseCol ? String(row[this.mappings.courseCol] || '').trim() : '';
+            let nameVal = this.cleanNameJS(this.getFlexibleRowValue(row, ['name', 'candidate', 'student', 'person'], this.mappings.nameCol));
+            let rawPhoneVal = this.getFlexibleRowValue(row, ['phone', 'mob', 'mobile', 'contact', 'whatsapp', 'ph'], this.mappings.phoneCol);
+            let rawEmailVal = this.getFlexibleRowValue(row, ['email', 'mail', 'gmail'], this.mappings.emailCol);
+            let courseVal = this.getFlexibleRowValue(row, ['course', 'subject', 'program', 'stream'], this.mappings.courseCol);
 
             // Skip completely empty Excel placeholder rows (where Name, Phone, Email & Course are ALL N/A or Blank)
             const isBlank = (v) => !v || v.toUpperCase() === 'N/A' || v.toUpperCase() === 'NULL' || v.toUpperCase() === 'UNDEFINED';
@@ -1243,10 +1598,9 @@ const cleanerDataDefinition = {
             let emailRes = this.validateEmailJS(rawEmailVal);
 
             let phoneVal = phoneRes.isValid ? phoneRes.digits : '';
-            let emailVal = emailRes.isValid ? emailRes.email : '';
+            let emailVal = emailRes.email;
 
             // Allow import if AT LEAST ONE contact method is valid (Phone OR Email)!
-            // Only flag as invalid/skip if BOTH Phone AND Email are missing/invalid!
             let isInvalidContact = !phoneRes.isValid && !emailRes.isValid;
             let invalidReason = '';
             if (isInvalidContact) {
@@ -1259,8 +1613,8 @@ const cleanerDataDefinition = {
                 invalidReason = 'Valid Email (Phone Blank)';
             }
 
-            let sourceVal = this.mappings.sourceCol ? String(row[this.mappings.sourceCol] || '').trim() : 'Direct/Organic';
-            let dateVal = this.mappings.dateCol ? row[this.mappings.dateCol] : '';
+            let sourceVal = this.getFlexibleRowValue(row, ['source', 'platform', 'channel', 'vendor', 'medium'], this.mappings.sourceCol) || 'Direct/Organic';
+            let dateVal = this.getFlexibleRowValue(row, ['date', 'reg', 'created', 'time'], this.mappings.dateCol);
 
             // Read EXACT Final Status string from sheet cell
             let statusVal = '';
@@ -1269,20 +1623,8 @@ const cleanerDataDefinition = {
             
             if (exactFinalKey && row[exactFinalKey] !== undefined && row[exactFinalKey] !== null) {
                 statusVal = String(row[exactFinalKey]).trim();
-                this.mappings.statusCol = exactFinalKey;
-            } else if (this.mappings.statusCol && row[this.mappings.statusCol] !== undefined && row[this.mappings.statusCol] !== null) {
-                statusVal = String(row[this.mappings.statusCol]).trim();
             } else {
-                // Auto-fallback: search row for any key containing 'final' or 'status' or 'disposition' or 'remark' (ignoring fresher)
-                const fallbackKey = rowKeys.find(k => {
-                    const lk = k.toLowerCase();
-                    if (lk.includes('fresher') || lk.includes('experience') || lk.includes('marital')) return false;
-                    return lk.includes('final') || lk.includes('status') || lk.includes('disposition') || lk.includes('remark') || lk.includes('stage');
-                });
-                if (fallbackKey && row[fallbackKey] !== undefined && row[fallbackKey] !== null) {
-                    statusVal = String(row[fallbackKey]).trim();
-                    if (!this.mappings.statusCol) this.mappings.statusCol = fallbackKey;
-                }
+                statusVal = this.getFlexibleRowValue(row, ['final status', 'final_status', 'disposition', 'status', 'remark', 'stage'], this.mappings.statusCol);
             }
 
             if (!sourceVal) sourceVal = 'Direct/Organic';
@@ -1588,7 +1930,13 @@ const cleanerDataDefinition = {
             .then(r => r.json())
             .then(res => {
                 if (res.success) {
-                    this.dbLeads = res.leads;
+                    this.dbLeads = (res.leads || []).map(r => {
+                        let parsed = this.parseRealDateAndMonth(r.date || r.Date);
+                        if (parsed.month) r.Month = r.month = parsed.month;
+                        if (parsed.year) r.Year = r.year = parsed.year;
+                        if (parsed.quarter) r.Quarter = r.quarter = parsed.quarter;
+                        return r;
+                    });
                     this.renderCharts();
                 }
             });

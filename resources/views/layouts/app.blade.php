@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>F1 MTech - Admin Portal & BI Data Vault</title>
+    <title>F1 Macrotechnologies - Admin Portal & BI Data Vault</title>
     <link rel="icon" type="image/webp" href="https://f1mtech.com/public/uploads/202512031446logo_f1.webp">
     
     <!-- Google Fonts Poppins -->
@@ -208,7 +208,7 @@
                 <div style="display: flex; align-items: center; gap: 14px;">
                     <div style="background: var(--primary-navy); color: white; padding: 6px 14px; border-radius: 8px; font-weight: 800; font-size: 18px;">F1M</div>
                     <div>
-                        <h1 style="font-size: 17px; font-weight: 800; color: var(--primary-navy); margin: 0;">F1 MTECH ENTERPRISE ADMIN PORTAL</h1>
+                        <h1 style="font-size: 17px; font-weight: 800; color: var(--primary-navy); margin: 0;">F1 MACROTECHNOLOGIES ENTERPRISE ADMIN PORTAL</h1>
                         <span style="font-size: 11px; color: #64748b; font-weight: 600;">Lead Quality Engine, MySQL Vault & BI Analytics</span>
                     </div>
                 </div>

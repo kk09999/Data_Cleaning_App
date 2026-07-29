@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - F1 MTech Data Cleaner & Vault</title>
+    <title>Login - F1 Macrotechnologies Data Cleaner & Vault</title>
     <link rel="icon" type="image/webp" href="https://f1mtech.com/public/uploads/202512031446logo_f1.webp">
     
     <!-- Google Fonts Poppins -->
@@ -168,7 +168,7 @@
     <div class="login-card">
         <div class="login-header">
             <div class="logo-badge">F1M</div>
-            <h1 class="login-title">F1 MTECH DATA VAULT</h1>
+            <h1 class="login-title">F1 MACROTECHNOLOGIES DATA VAULT</h1>
             <p class="login-subtitle">Authentication Required to Access Lead Cleaner & Database</p>
         </div>
 
