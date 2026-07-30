@@ -1,0 +1,9 @@
+{
+  "name": "f1mtech-data-cleaner",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "echo 'Running dev environment'",
+    "build": "echo 'Build completed successfully'"
+  }
+}
