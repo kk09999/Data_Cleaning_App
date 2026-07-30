@@ -1,5 +1,6 @@
 /vendor
 /.env
+composer.lock
 /storage/*.key
 /storage/framework/cache/*
 /storage/framework/sessions/*
